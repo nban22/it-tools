@@ -1,0 +1,17 @@
+{
+  "name": "it-tools",
+  "version": "1.0.0",
+  "description": "Dự án này là một ứng dụng Blazor Web App sử dụng PostgreSQL làm cơ sở dữ liệu. Dưới đây là các bước để cấu hình và chạy dự án trên Visual Studio Code (VS Code) hoặc Visual Studio 2022.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "autoprefixer": "^10.4.21",
+    "postcss": "^8.5.3",
+    "tailwindcss": "^3.4.17"
+  }
+}
