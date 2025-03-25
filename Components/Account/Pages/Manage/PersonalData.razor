@@ -1,4 +1,4 @@
-﻿@page "/Account/Manage/PersonalData"
+﻿@* @page "/Account/Manage/PersonalData"
 
 @inject IdentityUserAccessor UserAccessor
 
@@ -31,4 +31,4 @@
     {
         _ = await UserAccessor.GetRequiredUserAsync(HttpContext);
     }
-}
+} *@

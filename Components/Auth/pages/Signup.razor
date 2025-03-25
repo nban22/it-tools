@@ -1,9 +1,132 @@
-﻿@page "/signup"
-@layout AuthLayout
-@attribute [AllowAnonymous]
+@page "/signup"
 
-<h3>Signup</h3>
+@layout AuthLayout
+
+@inject UserService UserService
+@inject EmailService EmailService
+@inject ILogger<Signup> Logger
+@inject NavigationManager NavigationManager
+
+<PageTitle>Sign up</PageTitle>
+
+<!-- Nút quay lại (giữ nguyên) -->
+<button class="mb-4 w-10 h-10 flex items-center justify-center bg-white rounded-full shadow-md">
+    <HeroIcon Name="arrow-left-square" class="w-6 h-6 text-black" />
+</button>
+
+<!-- Tiêu đề -->
+<h1 class="text-3xl font-bold text-black mb-6">Create your account</h1>
+
+<!-- Form đăng ký -->
+<EditForm Model="Input" asp-route-returnUrl="@ReturnUrl" method="post" OnValidSubmit="RegisterUser" FormName="register">
+    <DataAnnotationsValidator />
+
+    <!-- Trường Email -->
+    <div class="">
+        <InputText @bind-Value="Input.Email"
+            class="w-full bg-gray-100 border border-gray-300 rounded-md p-3 text-gray-500" autocomplete="username"
+            aria-required="true" placeholder="Enter your email" />
+    </div>
+    <ValidationMessage For="() => Input.Email" class="text-red-300 mb-1" />
+
+    <!-- Trường Password với toggle hiển thị -->
+    <div class="relative mt-4">
+        <InputText type="@(showPassword ? "text" : "password")" @bind-Value="Input.Password"
+            class="w-full bg-gray-100 border border-gray-300 rounded-md p-3 text-gray-500" autocomplete="new-password"
+            aria-required="true" placeholder="Enter your password" />
+        <div class="absolute right-3 top-1/2 transform -translate-y-1/2" @onclick="TogglePasswordVisibility">
+            <HeroIcon Name="@(showPassword ? "eye" : "eye-slash-fill")" class="w-5 h-5 text-gray-500" />
+        </div>
+    </div>
+    <ValidationMessage For="() => Input.Password" class="text-red-300 mb-1" />
+
+    <!-- Trường Confirm Password với toggle hiển thị -->
+    <div class="relative mt-4">
+        <InputText type="@(showConfirmPassword ? "text" : "password")" @bind-Value="Input.ConfirmPassword"
+            class="w-full bg-gray-100 border border-gray-300 rounded-md p-3 text-gray-500" autocomplete="new-password"
+            aria-required="true" placeholder="Confirm your password" />
+        <div class="absolute right-3 top-1/2 transform -translate-y-1/2" @onclick="ToggleConfirmPasswordVisibility">
+            <HeroIcon Name="@(showConfirmPassword ? "eye" : "eye-slash-fill")" class="w-5 h-5 text-gray-500" />
+        </div>
+    </div>
+    <ValidationMessage For="() => Input.ConfirmPassword" class="text-red-300 mb-1" />
+
+    <!-- Thông báo lỗi -->
+    <StatusMessage Message="@errorMessage" />
+
+    <!-- Nút Sign up -->
+    <button type="submit" class="w-full bg-black text-white rounded-md p-4 font-bold mt-4">Sign up</button>
+</EditForm>
+
+<!-- Phần đăng ký bằng dịch vụ bên ngoài -->
+<div class="text-center my-4">
+    <span class="text-sm text-gray-500">Or Sign up with</span>
+</div>
+<div class="flex justify-center gap-4">
+    <button class="w-10 h-10 flex items-center justify-center bg-white border border-gray-300 rounded-md">
+        <span class="text-blue-600">F</span>
+    </button>
+    <button class="w-10 h-10 flex items-center justify-center bg-white border border-gray-300 rounded-md">
+        <span class="text-red-500">G</span>
+    </button>
+    <button class="w-10 h-10 flex items-center justify-center bg-white border border-gray-300 rounded-md">
+        <span class="text-black">A</span>
+    </button>
+</div>
+
+<!-- Liên kết đến trang đăng nhập -->
+<div class="text-center mt-4">
+    <span class="text-sm text-gray-500">Already have an account? </span>
+    <a href="/login" class="text-sm text-teal-500 hover:underline">Login Now</a>
+</div>
 
 @code {
+    private bool showPassword = false;
+    private bool showConfirmPassword = false;
+    private string? errorMessage;
 
+    private void TogglePasswordVisibility()
+    {
+        Logger.LogInformation("Toggling password visibility");
+        showPassword = !showPassword;
+    }
+    private void ToggleConfirmPasswordVisibility() => showConfirmPassword = !showConfirmPassword;
+
+    [SupplyParameterFromForm]
+    private InputModel Input { get; set; } = new();
+
+    [SupplyParameterFromQuery]
+    private string? ReturnUrl { get; set; }
+
+    private async Task RegisterUser(EditContext editContext)
+    {
+        var result = await UserService.RegisterUserAsync(Input.Email, Input.Password);
+        if (result)
+        {
+            NavigationManager.NavigateTo("/login");
+        }
+        else
+        {
+            errorMessage = "Failed to register user.";
+        }
+    }
+
+    private sealed class InputModel
+    {
+        [Required]
+        [EmailAddress]
+        [Display(Name = "Email")]
+        public string Email { get; set; } = "";
+
+        [Required]
+        [StringLength(100, ErrorMessage = "The {0} must be at least {2} and at max {1} characters long.", MinimumLength = 6)]
+        [DataType(DataType.Password)]
+        [Display(Name = "Password")]
+        public string Password { get; set; } = "";
+
+        [DataType(DataType.Password)]
+        [Display(Name = "Confirm password")]
+        [Compare("Password", ErrorMessage = "The password and confirmation password do not match.")]
+        public string ConfirmPassword { get; set; } = "";
+    }
 }
