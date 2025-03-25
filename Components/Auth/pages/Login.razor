@@ -1,6 +1,150 @@
 @page "/login"
 @layout AuthLayout
-@attribute [AllowAnonymous]
 
-<h3 class="bg-blue-800">Login or</h3>
+@using System.ComponentModel.DataAnnotations
+@using it_tools.Services
+@inject UserService UserService
+@inject NavigationManager NavigationManager
+@inject ILogger<Login> Logger
+@inject IHttpContextAccessor HttpContextAccessor
+@inject IJSRuntime JSRuntime
 
+<PageTitle>Log in</PageTitle>
+
+<button class="mb-4 w-10 h-10 flex items-center justify-center bg-white rounded-full shadow-md" @onclick="HandleClick">
+    <HeroIcon Name="arrow-left-square" class="w-6 h-6 text-black" />
+</button>
+<h1 class="text-3xl font-bold text-black mb-6">Welcome back! Glad to see you, Again!</h1>
+<EditForm Model="Input" OnValidSubmit="LoginUser" FormName="login">
+    <DataAnnotationsValidator />
+    <div class="mb-4">
+        <input @bind="Input.Email"
+            class="w-full bg-gray-100 border border-gray-300 rounded-md p-3 text-gray-500" autocomplete="username"
+            aria-required="true" placeholder="Enter your email" />
+    </div>
+    <ValidationMessage For="() => Input.Email" class="text-red-300" />
+    <div class="relative mb-4">
+        <input type="@(showPassword ? "text" : "password")" @bind="Input.Password"
+            class="w-full bg-gray-100 border border-gray-300 rounded-md p-3 text-gray-500"
+            autocomplete="current-password" aria-required="true" placeholder="Enter your password" />
+        <button class="absolute right-3 top-1/2 transform -translate-y-1/2" @onclick="ToggleEye" type="button">
+            @{
+                if (showPassword)
+                {
+                    <HeroIcon Name="eye" class="w-5 h-5 text-gray-500" />
+                }
+                else
+                {
+                    <HeroIcon Name="eye-slash-fill" class="w-5 h-5 text-gray-500" />
+                }
+            }
+        </button>
+    </div>
+    <ValidationMessage For="() => Input.Password" class="text-red-300" />
+    <div class="text-right mb-4">
+        <a href="/forgot-password" class="text-sm text-blue-600 hover:underline">Forgot password?</a>
+    </div>
+    <div class="text-left mb-4">
+        <label class="form-label">
+            <InputCheckbox @bind-Value="Input.RememberMe"
+                class="w-4 h-4 text-black border-gray-300 rounded focus:ring focus:ring-black" />
+            Remember me
+        </label>
+    </div>
+    <StatusMessage Message="@errorMessage" />
+    <button type="submit" class="w-full bg-black text-white rounded-md p-4 font-bold mb-4">Login</button>
+</EditForm>
+<div class="text-center my-4">
+    <span class="text-sm text-gray-500">Or Login with</span>
+</div>
+<div class="flex justify-center gap-4">
+    <button class="w-10 h-10 flex items-center justify-center bg-white border border-gray-300 rounded-md">
+        <span class="text-blue-600">F</span>
+    </button>
+    <button class="w-10 h-10 flex items-center justify-center bg-white border border-gray-300 rounded-md">
+        <span class="text-red-500">G</span>
+    </button>
+    <button class="w-10 h-10 flex items-center justify-center bg-white border border-gray-300 rounded-md">
+        <span class="text-black">A</span>
+    </button>
+</div>
+<div class="text-center mt-4">
+    <span class="text-sm text-gray-500">Don't have an account? </span>
+    <a href="/signup" class="text-sm text-teal-500 hover:underline">Register Now</a>
+</div>
+
+@code {
+    private string? errorMessage;
+    private bool showPassword = false;
+
+    private void HandleClick()
+    {
+        Logger.LogInformation("Navigating to home page.");
+        // NavigationManager.NavigateTo("/");
+    }
+
+    override protected void OnInitialized()
+    {
+        Logger.LogInformation("Login page initialized.");
+        Console.WriteLine("Login page initialized.");
+    }
+
+    private void ToggleEye()
+    {
+        Console.WriteLine("ToggleEye called");
+        Logger.LogInformation("Toggling password visibility");
+        showPassword = !showPassword;
+    }
+
+    [SupplyParameterFromForm]
+    private InputModel Input { get; set; } = new();
+
+    [SupplyParameterFromQuery]
+    private string? ReturnUrl { get; set; }
+
+    public async Task LoginUser()
+    {
+        var authResult = await UserService.AuthenticateUserAsync(Input.Email, Input.Password);
+        if (authResult.Succeeded)
+        {
+            var user = await UserService.GetUserByEmailAsync(Input.Email);
+            if (user == null)
+            {
+                errorMessage = "User not found.";
+                return;
+            }
+
+            // Redirect đến trang xử lý đăng nhập
+            var redirectUrl = $"/auth/loginhandler?email={Uri.EscapeDataString(Input.Email)}&rememberMe={Input.RememberMe}&returnUrl={Uri.EscapeDataString(ReturnUrl ?? "/")}";
+            @* NavigationManager.NavigateTo(redirectUrl); *@
+            await JSRuntime.InvokeVoidAsync("window.location.assign", redirectUrl);
+        }
+        else if (authResult.RequiresTwoFactor)
+        {
+            errorMessage = "Two-factor authentication is required.";
+        }
+        else if (authResult.IsLockedOut)
+        {
+            Logger.LogWarning("User account locked out.");
+            errorMessage = "Account is locked out.";
+        }
+        else
+        {
+            errorMessage = authResult.ErrorMessage ?? "Invalid login attempt.";
+        }
+    }
+
+    private sealed class InputModel
+    {
+        [Required]
+        [EmailAddress]
+        public string Email { get; set; } = "";
+
+        [Required]
+        [DataType(DataType.Password)]
+        public string Password { get; set; } = "";
+
+        [Display(Name = "Remember me?")]
+        public bool RememberMe { get; set; }
+    }
+}

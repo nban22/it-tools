@@ -1,5 +1,4 @@
 ﻿@inherits LayoutComponentBase
-@layout it_tools.Components.Layout.MainLayout
 @inject NavigationManager NavigationManager
 
 @if (HttpContext is null)
@@ -8,7 +7,11 @@
 }
 else
 {
-    @Body
+    <div class="flex items-center justify-center min-h-screen bg-white">
+        <main class="max-w-md w-full p-6">
+            @Body
+        </main>
+    </div>
 }
 
 @code {

@@ -7,3 +7,13 @@ public class ApplicationUser : IdentityUser
 {
 }
 
+// file này không dùng nữa nhé (chưa xóa vì xóa sẽ bị lỗi ở các file khác)
+// file này không dùng nữa nhé (chưa xóa vì xóa sẽ bị lỗi ở các file khác)
+// file này không dùng nữa nhé (chưa xóa vì xóa sẽ bị lỗi ở các file khác)
+// file này không dùng nữa nhé (chưa xóa vì xóa sẽ bị lỗi ở các file khác)
+// file này không dùng nữa nhé (chưa xóa vì xóa sẽ bị lỗi ở các file khác)
+// file này không dùng nữa nhé (chưa xóa vì xóa sẽ bị lỗi ở các file khác)
+// file này không dùng nữa nhé (chưa xóa vì xóa sẽ bị lỗi ở các file khác)
+// file này không dùng nữa nhé (chưa xóa vì xóa sẽ bị lỗi ở các file khác)
+// file này không dùng nữa nhé (chưa xóa vì xóa sẽ bị lỗi ở các file khác)
+// file này không dùng nữa nhé (chưa xóa vì xóa sẽ bị lỗi ở các file khác)
