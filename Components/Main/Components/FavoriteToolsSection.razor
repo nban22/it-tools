@@ -10,13 +10,16 @@
             <circle cx="12" cy="19" r="2" />
         </svg>
     </div>
-    @if (Tools != null)
-    {
-        @foreach (var tool in Tools)
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        @if (Tools != null)
         {
-            <ToolCard Tool="tool as ITool" />
+            @foreach (var tool in Tools)
+            {
+                <ToolCard Tool="tool as ITool" />
+            }
         }
-    }
+    </div>
 </div>
 
 @code {

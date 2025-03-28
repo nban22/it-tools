@@ -6,4 +6,8 @@ public interface IToolRepository
 {
     Task<List<Tool>> GetToolsForUnauthorizedAsync();
     Task<List<ToolDto>> GetToolsForUserAsync(string userId);
+    // Task<List<ToolGroupDto>> GetToolGroupsForUserAsync(string userId);
+
+    // Task<List<ToolGroupDto>> GetToolGroupsForUnauthorizedAsync();
+    
 }
