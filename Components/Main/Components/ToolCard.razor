@@ -4,23 +4,27 @@
 @inject NavigationManager NavigationManager
 @inject UserRepository UserRepo
 @inject AuthenticationStateProvider AuthenticationStateProvider
-@inject ILogger<ToolCard> Logger 
+@using System.Security.Claims
 
-<div class="bg-white border border-gray-200 shadow-sm rounded-lg p-4 flex items-start justify-between hover:shadow-md transition-shadow cursor-pointer" @onclick="OnToolClick">
+<div class="bg-white border border-gray-200 shadow-sm rounded-lg p-4 flex items-start justify-between hover:shadow-md transition-shadow cursor-pointer"
+     @onclick="OnToolClick">
     <div class="flex items-start space-x-3">
-        <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            @((MarkupString)(Tool?.Icon ?? string.Empty))
-        </svg>
+        @((MarkupString)(Tool?.Icon ?? string.Empty))
         <div>
             <h3 class="text-lg font-semibold text-gray-800">@Tool?.Name</h3>
             <p class="text-sm text-gray-500">@Tool?.Description</p>
         </div>
     </div>
-    <div class="flex items-center space-x-2">
-        <svg class="w-5 h-5 @(Tool is ToolDto dto && dto.IsFavorite ? "text-green-500" : "text-gray-300")" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" @onclick="HandleFavoriteClick" @onclick:stopPropagation>
+    <button class="flex items-center space-x-2" 
+            @onclick="HandleFavoriteClick" 
+            @onclick:stopPropagation>
+        <svg class="w-5 h-5 @(Tool is ToolDto dto && dto.IsFavorite ? "text-green-500" : "text-gray-300")"
+             fill="currentColor" 
+             viewBox="0 0 24 24" 
+             xmlns="http://www.w3.org/2000/svg">
             <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
         </svg>
-    </div>
+    </button>
 </div>
 
 @if (showModal)
@@ -30,14 +34,14 @@
             <h3 class="text-lg font-semibold text-gray-800">Yêu cầu đăng nhập</h3>
             <p class="text-sm text-gray-600 mt-2">Bạn cần đăng nhập để thêm công cụ vào danh sách yêu thích. Bạn có muốn đăng nhập ngay bây giờ không?</p>
             <div class="mt-4 flex justify-end space-x-2">
-                <button class="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300" @onclick="CloseModal">Hủy</button>
-                <button class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600" @onclick="RedirectToLogin">Đăng nhập</button>
+                <button class="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300"
+                        @onclick="CloseModal">Hủy</button>
+                <button class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600" 
+                        @onclick="RedirectToLogin">Đăng nhập</button>
             </div>
         </div>
     </div>
 }
-
-
 
 @code {
     [Parameter]
@@ -56,23 +60,21 @@
         var user = authState.User;
 
         isLoggedIn = user.Identity?.IsAuthenticated ?? false;
-        
+
         if (isLoggedIn)
         {
-            currentUserId = user.FindFirst(c => c.Type == "sub")?.Value 
-                ?? user.FindFirst(c => c.Type == System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-            
+            currentUserId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
             if (Tool is ToolDto dto && !string.IsNullOrEmpty(currentUserId))
             {
                 try
                 {
                     var favoriteTools = await UserRepo.GetFavoriteTools(currentUserId);
                     dto.IsFavorite = favoriteTools.Any(t => t.Id == dto.Id);
-                    Logger.LogInformation("Successfully loaded favorite tools for user {UserId}", currentUserId);
                 }
-                catch (Exception ex)
+                catch
                 {
-                    Logger.LogError(ex, "Failed to load favorite tools for user {UserId}", currentUserId);
+                    // Consider handling the exception silently or notifying the user if needed
                 }
             }
         }
@@ -83,7 +85,6 @@
         if (!isLoggedIn)
         {
             showModal = true;
-            Logger.LogInformation("User attempted to favorite tool {ToolId} but is not logged in", Tool?.Id);
             return;
         }
 
@@ -95,22 +96,17 @@
                 {
                     await UserRepo.RemoveFavoriteTool(currentUserId, dto.Id);
                     dto.IsFavorite = false;
-                    Logger.LogInformation("Successfully removed tool {ToolId} from favorites for user {UserId}", 
-                        dto.Id, currentUserId);
                 }
                 else
                 {
                     await UserRepo.AddFavoriteTool(currentUserId, dto.Id);
                     dto.IsFavorite = true;
-                    Logger.LogInformation("Successfully added tool {ToolId} to favorites for user {UserId}", 
-                        dto.Id, currentUserId);
                 }
                 StateHasChanged();
             }
-            catch (Exception ex)
+            catch
             {
-                Logger.LogError(ex, "Failed to update favorite status for tool {ToolId} for user {UserId}", 
-                    dto.Id, currentUserId);
+                // Consider handling the exception silently or notifying the user if needed
             }
         }
     }
@@ -118,13 +114,11 @@
     private void CloseModal()
     {
         showModal = false;
-        Logger.LogInformation("Login prompt modal closed");
     }
 
     private void RedirectToLogin()
     {
         showModal = false;
-        Logger.LogInformation("Redirecting to login page from favorite tool attempt");
         NavigationManager.NavigateTo("/login");
     }
 }

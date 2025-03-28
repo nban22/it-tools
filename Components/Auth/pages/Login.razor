@@ -7,7 +7,6 @@
 @inject NavigationManager NavigationManager
 @inject ILogger<Login> Logger
 @inject IHttpContextAccessor HttpContextAccessor
-@* @inject IJSRuntime JSRuntime *@
 
 <PageTitle>Log in</PageTitle>
 
@@ -83,16 +82,8 @@
         // NavigationManager.NavigateTo("/");
     }
 
-    override protected void OnInitialized()
-    {
-        Logger.LogInformation("Login page initialized.");
-        Console.WriteLine("Login page initialized.");
-    }
-
     private void ToggleEye()
     {
-        Console.WriteLine("ToggleEye called");
-        Logger.LogInformation("Toggling password visibility");
         showPassword = !showPassword;
     }
 
@@ -117,7 +108,6 @@
             // Redirect đến trang xử lý đăng nhập
             var redirectUrl = $"/auth/loginhandler?email={Uri.EscapeDataString(Input.Email)}&rememberMe={Input.RememberMe}&returnUrl={Uri.EscapeDataString(ReturnUrl ?? "/")}";
             NavigationManager.NavigateTo(redirectUrl, forceLoad: true);
-            @* await JSRuntime.InvokeVoidAsync("window.location.assign", redirectUrl); *@
         }
         else if (authResult.RequiresTwoFactor)
         {

@@ -30,6 +30,7 @@ public class LoginHandlerModel : PageModel
         var claims = new List<Claim>
         {
             new Claim(ClaimTypes.Name, user.Email ?? string.Empty),
+            new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
             new Claim(ClaimTypes.Role, "User")
         };
         var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);

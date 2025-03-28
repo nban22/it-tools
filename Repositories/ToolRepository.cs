@@ -75,4 +75,100 @@ public class ToolRepository : IToolRepository
             throw;
         }
     }
+    
+    // Lấy danh sách ToolGroups với Tools cho người dùng chưa xác thực
+    // public async Task<List<ToolGroupDto>> GetToolGroupsForUnauthorizedAsync()
+    // {
+    //     try
+    //     {
+    //         _logger.LogInformation("Fetching tool groups for unauthorized users.");
+    //         var toolGroups = await _dbContext.ToolGroups
+    //             .Select(g => new ToolGroupDto
+    //             {
+    //                 Id = g.Id,
+    //                 Name = g.Name,
+    //                 Description = g.Description,
+    //                 Tools = g.Tools
+    //                     .Where(t => t.IsEnabled)
+    //                     .Select(t => new ToolDto
+    //                     {
+    //                         Id = t.Id,
+    //                         GroupId = t.GroupId,
+    //                         Name = t.Name,
+    //                         Description = t.Description,
+    //                         IsPremium = t.IsPremium,
+    //                         Slug = t.Slug,
+    //                         Icon = t.Icon,
+    //                         IsEnabled = t.IsEnabled,
+    //                         IsFavorite = false // Không có favorite cho unauthorized
+    //                     }).ToList()
+    //             })
+    //             .ToListAsync();
+
+    //         _logger.LogInformation("Found {GroupCount} tool groups for unauthorized users.", toolGroups.Count);
+    //         return toolGroups;
+    //     }
+    //     catch (Exception ex)
+    //     {
+    //         _logger.LogError(ex, "Error fetching tool groups for unauthorized users.");
+    //         throw;
+    //     }
+    // }
+
+    // // Lấy danh sách ToolGroups với Tools cho người dùng đã đăng nhập, bao gồm IsFavorite
+    // public async Task<List<ToolGroupDto>> GetToolGroupsForUserAsync(string userId)
+    // {
+    //     try
+    //     {
+    //         _logger.LogInformation("Fetching tool groups for user with ID: {UserId}", userId);
+
+    //         // Lấy danh sách các ToolId yêu thích của người dùng
+    //         var favoriteToolIds = await _dbContext.FavouriteTools
+    //             .Where(ft => ft.UserId == userId)
+    //             .Select(ft => ft.ToolId)
+    //             .ToListAsync();
+
+    //         // Lấy danh sách ToolGroups và Tools
+    //         var toolGroups = await _dbContext.ToolGroups
+    //             .Select(g => new ToolGroupDto
+    //             {
+    //                 Id = g.Id,
+    //                 Name = g.Name,
+    //                 Description = g.Description,
+    //                 Tools = g.Tools
+    //                     .Where(t => t.IsEnabled)
+    //                     .Select(t => new ToolDto
+    //                     {
+    //                         Id = t.Id,
+    //                         GroupId = t.GroupId,
+    //                         Name = t.Name,
+    //                         Description = t.Description,
+    //                         IsPremium = t.IsPremium,
+    //                         Slug = t.Slug,
+    //                         Icon = t.Icon,
+    //                         IsEnabled = t.IsEnabled,
+    //                         IsFavorite = favoriteToolIds.Contains(t.Id)
+    //                     }).ToList()
+    //             })
+    //             .ToListAsync();
+
+    //         _logger.LogInformation("Found {GroupCount} tool groups for user {UserId}.", toolGroups.Count, userId);
+    //         return toolGroups;
+    //     }
+    //     catch (Exception ex)
+    //     {
+    //         _logger.LogError(ex, "Error fetching tool groups for user {UserId}", userId);
+    //         throw;
+    //     }
+    // }
+
+}
+
+// DTO classes để truyền dữ liệu
+public class ToolGroupDto
+{
+    public string? Id { get; set; }
+    public string? Name { get; set; }
+    public string? Description { get; set; }
+    public List<ToolDto>? Tools { get; set; }
 }

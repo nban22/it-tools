@@ -18,12 +18,8 @@ builder.Services.AddCascadingAuthenticationState();
 
 
 builder.Services.AddScoped<RedirectManager>();
-builder.Services.AddScoped<UserService>();
-builder.Services.AddScoped<EmailService>();
 builder.Services.AddHttpContextAccessor();
 
-builder.Services.AddScoped<IToolRepository, ToolRepository>();
-builder.Services.AddScoped<UserRepository>();
 
 
 
@@ -45,8 +41,13 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 builder.Services.AddDbContext<ApplicationDbContext>(options => 
     options.UseNpgsql(connectionString));
 
-builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
+builder.Services.AddScoped<UserService>();
+builder.Services.AddScoped<EmailService>();
+builder.Services.AddScoped<IToolRepository, ToolRepository>();
+builder.Services.AddScoped<UserRepository>();
+
+builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
