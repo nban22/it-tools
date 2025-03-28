@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace ittools.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialCreateNew : Migration
+    public partial class InitialCreate : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -64,8 +64,18 @@ namespace ittools.Migrations
                     Name = table.Column<string>(type: "text", nullable: true),
                     Description = table.Column<string>(type: "text", nullable: true),
                     IsPremium = table.Column<bool>(type: "boolean", nullable: false),
+                    DllPath = table.Column<string>(type: "text", nullable: true),
+                    ConfigPath = table.Column<string>(type: "text", nullable: true),
+                    Slug = table.Column<string>(type: "text", nullable: true),
+                    Icon = table.Column<string>(type: "text", nullable: true),
                     IsEnabled = table.Column<bool>(type: "boolean", nullable: false),
-                    ToolKey = table.Column<string>(type: "text", nullable: true)
+                    ToolKey = table.Column<string>(type: "text", nullable: true),
+                    ToolUrl = table.Column<string>(type: "text", nullable: true),
+                    Title = table.Column<string>(type: "text", nullable: true),
+                    IconSvg = table.Column<string>(type: "text", nullable: true),
+                    IsFavorite = table.Column<bool>(type: "boolean", nullable: false),
+                    SpecialIconSvg = table.Column<string>(type: "text", nullable: true),
+                    SpecialIconColor = table.Column<string>(type: "text", nullable: true)
                 },
                 constraints: table =>
                 {

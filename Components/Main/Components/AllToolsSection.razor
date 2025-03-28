@@ -1,0 +1,28 @@
+@using it_tools.Data
+@inject NavigationManager Navigation
+
+<div>
+    <h2 class="text-sm uppercase text-gray-500 mb-4">All the tools</h2>
+    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        @if (Tools != null)
+        {
+            foreach (var tool in Tools)
+            {
+                <ToolCard Tool="tool as ITool" OnToolClick="() => NavigateToTool(tool as Tool)" />
+            }
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public List<ITool>? Tools { get; set; }
+
+    private void NavigateToTool(Tool? tool)
+    {
+        if (tool != null && !string.IsNullOrEmpty(tool.Slug))
+        {
+            Navigation.NavigateTo($"/tools/{tool.Slug}");
+        }
+    }
+}

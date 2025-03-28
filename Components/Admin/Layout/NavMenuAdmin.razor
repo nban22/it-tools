@@ -1,0 +1,42 @@
+<div class="bg-gray-900 text-white w-64 min-h-screen p-4 fixed top-0 left-0 shadow-lg">
+    <h1 class="text-2xl font-bold mb-8 text-indigo-400 tracking-wide">it-tools</h1>
+    <ul class="space-y-2">
+        <li>
+            <NavLink href="/admin/dashboard" 
+                     class="block py-2.5 px-4 rounded-lg hover:bg-indigo-600 transition-colors duration-200 font-medium text-white">
+                Dashboard
+            </NavLink>
+        </li>
+        <li>
+            <NavLink href="/admin/tools/activate" 
+                     class="block py-2.5 px-4 rounded-lg hover:bg-indigo-600 transition-colors duration-200 font-medium text-white">
+                Kích hoạt/Vô hiệu hóa công cụ
+            </NavLink>
+        </li>
+        <li>
+            <NavLink href="/admin/tools/upgrade" 
+                     class="block py-2.5 px-4 rounded-lg hover:bg-indigo-600 transition-colors duration-200 font-medium text-white">
+                Nâng/Hạ cấp công cụ
+            </NavLink>
+        </li>
+        <li>
+            <NavLink href="/admin/tools/add" 
+                     class="block py-2.5 px-4 rounded-lg hover:bg-indigo-600 transition-colors duration-200 font-medium text-white">
+                Thêm công cụ
+            </NavLink>
+        </li>
+        <li>
+            <NavLink href="/admin/tools/delete" 
+                     class="block py-2.5 px-4 rounded-lg hover:bg-indigo-600 transition-colors duration-200 font-medium text-white">
+                Xóa công cụ
+            </NavLink>
+        </li>
+    </ul>
+</div>
+
+<style>
+    .active {
+        background-color: #4f46e5; /* indigo-600 */
+        color: #ffffff;
+    }
+</style>

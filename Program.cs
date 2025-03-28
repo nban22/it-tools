@@ -4,6 +4,7 @@ using it_tools.Data;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using it_tools.Components.Auth;
 using it_tools.Services;
+using it_tools.Repositories;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -20,6 +21,9 @@ builder.Services.AddScoped<RedirectManager>();
 builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<EmailService>();
 builder.Services.AddHttpContextAccessor();
+
+builder.Services.AddScoped<IToolRepository, ToolRepository>();
+builder.Services.AddScoped<UserRepository>();
 
 
 

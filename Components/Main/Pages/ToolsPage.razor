@@ -1,0 +1,61 @@
+@page "/tools/{Slug}"
+@inject it_tools.Data.ApplicationDbContext DbContext
+@using System.Reflection
+@using Microsoft.EntityFrameworkCore
+@inject ILogger<ToolsPage> Logger 
+
+@if (componentType != null)
+{
+    <DynamicComponent Type="componentType" />
+}
+else
+{
+    <p>Tool not found or failed to load.</p>
+}
+
+@code {
+    [Parameter]
+    public string? Slug { get; set; } // Thay ToolKey bằng Slug
+
+    private Type? componentType;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Logger.LogInformation($"Loading tool component with Slug: {Slug}");
+        var tool = await DbContext.Tools.FirstOrDefaultAsync(t => t.Slug == Slug); // Tìm tool theo Slug thay vì ToolKey
+        Logger.LogInformation($"Loading tool component from DLL: {tool?.DllPath}");
+        
+        if (tool != null && !string.IsNullOrEmpty(tool.DllPath))
+        {
+            try
+            {
+                Logger.LogInformation($"Loading tool component from DLL: {tool.DllPath}");
+                var assembly = Assembly.LoadFrom(tool.DllPath);
+                Logger.LogInformation($"Loaded assembly: {assembly.FullName}");
+                Logger.LogInformation($"Loaded assembly: {assembly.Location}");
+                var types = assembly.GetTypes();
+                
+                foreach (var type in types)
+                {
+                    Logger.LogInformation($">>>>>>>>>>>>>>>>>>>>Found type: {type.FullName}, Namespace: {type.Namespace}, Name: {type.Name}");
+                }
+
+                // Assume the component is named "ToolComponent" in the DLL
+                componentType = assembly.GetType("TokenGeneratorTool.TokenGenerator");
+                if (componentType == null)
+                {
+                    Logger.LogError($"Failed to load component type 'TokenGeneratorTool.TokenGenerator' from DLL: {tool.DllPath}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError($"Failed to load DLL: {ex.Message}");
+                Console.WriteLine($"Failed to load DLL: {ex.Message}");
+            }
+        }
+        else
+        {
+            Logger.LogWarning($"Tool with Slug '{Slug}' not found or DLL path is empty.");
+        }
+    }
+}
