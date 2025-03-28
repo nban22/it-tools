@@ -1,0 +1,43 @@
+@page "/admin/tools/delete"
+
+@using Microsoft.EntityFrameworkCore
+@layout it_tools.Components.Admin.Layout.AdminLayout
+@inject it_tools.Data.ApplicationDbContext DbContext
+
+<h3 class="text-xl font-semibold text-gray-800 mb-6">Xóa công cụ</h3>
+
+@if (tools == null)
+{
+    <p>Đang tải...</p>
+}
+else
+{
+    <ul class="space-y-4">
+        @foreach (var tool in tools)
+        {
+            <li class="flex justify-between items-center p-4 bg-white rounded-lg shadow">
+                <span class="text-gray-700">@tool.Title</span>
+                <button @onclick=@(() => DeleteSelectedTool(tool)) 
+                        class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">
+                    Xóa
+                </button>
+            </li>
+        }
+    </ul>
+}
+
+@code {
+    private List<Tool>? tools;
+
+    protected override async Task OnInitializedAsync()
+    {
+        tools = await DbContext.Tools.ToListAsync();
+    }
+
+    private async Task DeleteSelectedTool(Tool tool)
+    {
+        DbContext.Tools.Remove(tool);
+        await DbContext.SaveChangesAsync();
+        tools = await DbContext.Tools.ToListAsync(); // Cập nhật danh sách sau khi xóa
+    }
+}

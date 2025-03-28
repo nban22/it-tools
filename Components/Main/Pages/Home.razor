@@ -1,0 +1,84 @@
+@page "/"
+@layout MainLayout
+
+@using it_tools.Data
+@using it_tools.Components.Main.Components
+@using it_tools.Components.Layout
+@inject IToolRepository ToolRepository
+@inject AuthenticationStateProvider AuthStateProvider
+@inject ILogger<Home> Logger
+@inject ApplicationDbContext DbContext
+@using it_tools.Repositories
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
+
+<PageTitle>
+    Home
+</PageTitle>
+
+<div class="py-6">
+    @if (isAuthenticated)
+    {
+        <FavoriteToolsSection Tools="toolsForUser?.Where(t => t.IsFavorite).Select(t => (ITool)t).ToList() ?? new List<ITool>()" />
+        <AllToolsSection Tools="toolsForUser?.Select(t => (ITool)t).ToList() ?? new List<ITool>()" />
+    }
+    else
+    {
+        <AllToolsSection Tools="toolsUnauthorized?.Select(t => (ITool)t).ToList() ?? new List<ITool>()" />
+    }
+</div>
+
+@code {
+    private List<Tool>? toolsUnauthorized;
+    private List<ToolDto>? toolsForUser;
+    private bool isAuthenticated;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Logger.LogInformation("Initializing home page");
+        
+        try
+        {
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+            Logger.LogInformation("User identity: {UserIdentity}", user.Identity?.Name);
+            Logger.LogInformation("User authentication state: {IsAuthenticated}", user.Identity?.IsAuthenticated);
+
+            if (user.Identity?.IsAuthenticated == true)
+            {
+                isAuthenticated = true;
+                // Lấy email từ ClaimTypes.Name
+                string email = user.FindFirst(ClaimTypes.Name)?.Value ?? "unknown";
+                // Truy vấn DbContext để lấy userId dựa trên email
+                string userId = DbContext.Users.FirstOrDefault(u => u.Email == email)?.Id ?? "unknown";
+                Logger.LogInformation("Loading tools for authenticated user with Email/ID {UserId}", userId);
+                
+                toolsForUser = await ToolRepository.GetToolsForUserAsync(userId);
+                
+                Logger.LogInformation("Successfully loaded {ToolCount} tools for user {UserId}", 
+                    toolsForUser?.Count ?? 0, userId);
+            }
+            else
+            {
+                isAuthenticated = false;
+                Logger.LogInformation("Loading tools for unauthorized user");
+                
+                toolsUnauthorized = await ToolRepository.GetToolsForUnauthorizedAsync();
+                
+                Logger.LogInformation("Successfully loaded {ToolCount} tools for unauthorized user", 
+                    toolsUnauthorized?.Count ?? 0);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error occurred while initializing home page");
+            throw;
+        }
+    }
+
+    // Đảm bảo dispose DbContext nếu cần (cho Blazor Server)
+    public void Dispose()
+    {
+        DbContext?.Dispose();
+    }
+}

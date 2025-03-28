@@ -1,0 +1,41 @@
+@page "/admin/tools/activate"
+@using Microsoft.EntityFrameworkCore
+@layout it_tools.Components.Admin.Layout.AdminLayout
+@inject it_tools.Data.ApplicationDbContext DbContext
+
+<h3 class="text-xl font-semibold text-gray-800 mb-6">Kích hoạt/Vô hiệu hóa công cụ</h3>
+
+@if (tools == null)
+{
+    <p>Đang tải...</p>
+}
+else
+{
+    <ul class="space-y-4">
+        @foreach (var tool in tools)
+        {
+            <li class="flex justify-between items-center p-4 bg-white rounded-lg shadow">
+                <span class="text-gray-700">@tool.Name</span>
+                <button @onclick="() => ToggleActivation(tool)" 
+                        class="@(tool.IsEnabled ? "bg-red-500" : "bg-green-500") text-white px-4 py-2 rounded hover:opacity-90">
+                    @(tool.IsEnabled ? "Vô hiệu hóa" : "Kích hoạt")
+                </button>
+            </li>
+        }
+    </ul>
+}
+
+@code {
+    private List<Tool>? tools;
+
+    protected override async Task OnInitializedAsync()
+    {
+        tools = await DbContext.Tools.ToListAsync();
+    }
+
+    private async Task ToggleActivation(Tool tool)
+    {
+        tool.IsEnabled = !tool.IsEnabled;
+        await DbContext.SaveChangesAsync();
+    }
+}

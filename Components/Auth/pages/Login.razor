@@ -7,7 +7,7 @@
 @inject NavigationManager NavigationManager
 @inject ILogger<Login> Logger
 @inject IHttpContextAccessor HttpContextAccessor
-@inject IJSRuntime JSRuntime
+@* @inject IJSRuntime JSRuntime *@
 
 <PageTitle>Log in</PageTitle>
 
@@ -116,8 +116,8 @@
 
             // Redirect đến trang xử lý đăng nhập
             var redirectUrl = $"/auth/loginhandler?email={Uri.EscapeDataString(Input.Email)}&rememberMe={Input.RememberMe}&returnUrl={Uri.EscapeDataString(ReturnUrl ?? "/")}";
-            @* NavigationManager.NavigateTo(redirectUrl); *@
-            await JSRuntime.InvokeVoidAsync("window.location.assign", redirectUrl);
+            NavigationManager.NavigateTo(redirectUrl, forceLoad: true);
+            @* await JSRuntime.InvokeVoidAsync("window.location.assign", redirectUrl); *@
         }
         else if (authResult.RequiresTwoFactor)
         {

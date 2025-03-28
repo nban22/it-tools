@@ -1,0 +1,25 @@
+@using it_tools.Data
+@using it_tools.Repositories
+
+<div class="mb-6">
+    <div class="flex items-center justify-between mb-4">
+        <h2 class="text-sm uppercase text-gray-500">Your favorite tools</h2>
+        <svg class="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="12" cy="5" r="2" />
+            <circle cx="12" cy="12" r="2" />
+            <circle cx="12" cy="19" r="2" />
+        </svg>
+    </div>
+    @if (Tools != null)
+    {
+        @foreach (var tool in Tools)
+        {
+            <ToolCard Tool="tool as ITool" />
+        }
+    }
+</div>
+
+@code {
+    [Parameter]
+    public List<ITool>? Tools { get; set; }
+}

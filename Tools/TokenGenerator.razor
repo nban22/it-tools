@@ -1,0 +1,91 @@
+@using Microsoft.JSInterop
+
+
+@* TokenGenerator.razor *@
+<div class="bg-white rounded-lg shadow-md p-6">
+    <div class="flex justify-between items-start">
+        <h2 class="text-2xl font-bold text-gray-800">Token Generator</h2>
+        <svg class="w-6 h-6 text-green-500" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+            <path fill-rule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clip-rule="evenodd" />
+        </svg>
+    </div>
+    <p class="text-sm text-gray-500 mt-2">Generate random string with the chars you want, uppercase or lowercase letters, numbers and/or symbols.</p>
+
+    <div class="grid grid-cols-2 gap-4 mt-4">
+        <div class="flex items-center space-x-2">
+            <label class="text-gray-600">Uppercase (ABC...)</label>
+            <input type="checkbox" @bind="includeUppercase" class="form-checkbox h-5 w-5 text-green-500" />
+        </div>
+        <div class="flex items-center space-x-2">
+            <label class="text-gray-600">Numbers (123...)</label>
+            <input type="checkbox" @bind="includeNumbers" class="form-checkbox h-5 w-5 text-green-500" />
+        </div>
+        <div class="flex items-center space-x-2">
+            <label class="text-gray-600">Lowercase (abc...)</label>
+            <input type="checkbox" @bind="includeLowercase" class="form-checkbox h-5 w-5 text-green-500" />
+        </div>
+        <div class="flex items-center space-x-2">
+            <label class="text-gray-600">Symbols (!-...)</label>
+            <input type="checkbox" @bind="includeSymbols" class="form-checkbox h-5 w-5 text-green-500" />
+        </div>
+    </div>
+
+    <div class="mt-4">
+        <label class="text-gray-600">Length (@length)</label>
+        <input type="range" min="1" max="100" @bind="length" @bind:event="oninput" class="w-full h-1 bg-gray-300 rounded accent-green-500" />
+    </div>
+
+    <div class="mt-4">
+        <input type="text" value="@generatedToken" readonly class="w-full p-3 border border-gray-200 rounded-md bg-gray-100 text-gray-800 font-mono" />
+    </div>
+
+    <div class="flex space-x-3 mt-4">
+        <button @onclick="CopyToClipboard" class="bg-gray-100 text-gray-600 px-4 py-2 rounded-md border border-gray-200 hover:bg-gray-200">Copy</button>
+        <button @onclick="GenerateToken" class="bg-gray-100 text-gray-600 px-4 py-2 rounded-md border border-gray-200 hover:bg-gray-200">Refresh</button>
+    </div>
+</div>
+
+@code {
+    private bool includeUppercase = true;
+    private bool includeLowercase = true;
+    private bool includeNumbers = true;
+    private bool includeSymbols = false;
+    private int length = 64;
+    private string generatedToken = "";
+
+    public TokenGenerator(IJSRuntime jSRuntime)
+    {
+        JSRuntime = jSRuntime;
+    }
+
+    protected override void OnInitialized()
+    {
+        GenerateToken();
+    }
+
+    private void GenerateToken()
+    {
+        const string upper = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        const string lower = "abcdefghijklmnopqrstuvwxyz";
+        const string numbers = "0123456789";
+        const string symbols = "!@#$%^&*()-_=+[]{}|;:,.<>?";
+        string chars = "";
+        if (includeUppercase) chars += upper;
+        if (includeLowercase) chars += lower;
+        if (includeNumbers) chars += numbers;
+        if (includeSymbols) chars += symbols;
+
+        if (string.IsNullOrEmpty(chars)) return;
+
+        Random random = new Random();
+        generatedToken = new string(Enumerable.Repeat(chars, length)
+            .Select(s => s[random.Next(s.Length)]).ToArray());
+    }
+
+    private async Task CopyToClipboard()
+    {
+        await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", generatedToken);
+    }
+
+    [Inject] private IJSRuntime JSRuntime { get; set; }
+}

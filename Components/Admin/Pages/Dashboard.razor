@@ -1,0 +1,77 @@
+@page "/admin/dashboard"
+@using Microsoft.EntityFrameworkCore
+@layout it_tools.Components.Admin.Layout.AdminLayout
+@inject it_tools.Data.ApplicationDbContext DbContext
+
+<h3 class="text-xl font-semibold text-gray-800 mb-6">Dashboard</h3>
+
+@if (isLoading)
+{
+    <p>Đang tải...</p>
+}
+else
+{
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        <!-- Card: Tổng số công cụ -->
+        <div class="bg-white p-6 rounded-lg shadow-md">
+            <h4 class="text-lg font-medium text-gray-700 mb-2">Tổng số công cụ</h4>
+            <p class="text-3xl font-bold text-gray-900">@totalTools</p>
+        </div>
+
+        <!-- Card: Công cụ đang hoạt động -->
+        <div class="bg-white p-6 rounded-lg shadow-md">
+            <h4 class="text-lg font-medium text-gray-700 mb-2">Công cụ đang hoạt động</h4>
+            <p class="text-3xl font-bold text-green-600">@activeTools</p>
+        </div>
+
+        <!-- Card: Công cụ Premium -->
+        <div class="bg-white p-6 rounded-lg shadow-md">
+            <h4 class="text-lg font-medium text-gray-700 mb-2">Công cụ Premium</h4>
+            <p class="text-3xl font-bold text-blue-600">@premiumTools</p>
+        </div>
+    </div>
+
+    <!-- Danh sách công cụ gần đây -->
+    <div class="bg-white p-6 rounded-lg shadow-md">
+        <h4 class="text-lg font-medium text-gray-700 mb-4">Công cụ gần đây</h4>
+        @if (recentTools?.Any() == true)
+        {
+            <ul class="space-y-4">
+                @foreach (var tool in recentTools)
+                {
+                    <li class="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
+                        <div>
+                            <span class="text-gray-700 font-medium">@tool.Title</span>
+                            <span class="block text-sm text-gray-500">@(tool.IsPremium ? "Premium" : "Không Premium") | @(tool.IsEnabled ? "Hoạt động" : "Vô hiệu")</span>
+                        </div>
+                        <a href="@($"/admin/tools/activate")" class="text-blue-500 hover:underline">Quản lý</a>
+                    </li>
+                }
+            </ul>
+        }
+        else
+        {
+            <p class="text-gray-500">Không có công cụ nào.</p>
+        }
+    </div>
+}
+
+@code {
+    private bool isLoading = true;
+    private int totalTools;
+    private int activeTools;
+    private int premiumTools;
+    private List<Tool>? recentTools;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var allTools = await DbContext.Tools.ToListAsync();
+        
+        totalTools = allTools.Count;
+        activeTools = allTools.Count(t => t.IsEnabled);
+        premiumTools = allTools.Count(t => t.IsPremium); // Chỉ đếm công cụ Premium
+        recentTools = allTools.OrderByDescending(t => t.Id).Take(5).ToList(); // Lấy 5 công cụ gần đây nhất
+
+        isLoading = false;
+    }
+}

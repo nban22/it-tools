@@ -68,13 +68,28 @@ namespace ittools.Migrations
                     b.Property<string>("Id")
                         .HasColumnType("text");
 
+                    b.Property<string>("ConfigPath")
+                        .HasColumnType("text");
+
                     b.Property<string>("Description")
+                        .HasColumnType("text");
+
+                    b.Property<string>("DllPath")
                         .HasColumnType("text");
 
                     b.Property<string>("GroupId")
                         .HasColumnType("text");
 
+                    b.Property<string>("Icon")
+                        .HasColumnType("text");
+
+                    b.Property<string>("IconSvg")
+                        .HasColumnType("text");
+
                     b.Property<bool>("IsEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsFavorite")
                         .HasColumnType("boolean");
 
                     b.Property<bool>("IsPremium")
@@ -83,7 +98,22 @@ namespace ittools.Migrations
                     b.Property<string>("Name")
                         .HasColumnType("text");
 
+                    b.Property<string>("Slug")
+                        .HasColumnType("text");
+
+                    b.Property<string>("SpecialIconColor")
+                        .HasColumnType("text");
+
+                    b.Property<string>("SpecialIconSvg")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Title")
+                        .HasColumnType("text");
+
                     b.Property<string>("ToolKey")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ToolUrl")
                         .HasColumnType("text");
 
                     b.HasKey("Id");
