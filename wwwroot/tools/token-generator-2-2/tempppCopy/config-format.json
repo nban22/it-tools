@@ -1,9 +1,0 @@
-{
-    "Name": "Token Generator",
-    "Description": "Tool Description",
-    "Group": "General",
-    "TypeName": "TokenGenerator",
-    "Namespace": "TokenGeneratorTool",
-    "Slug": "token-generator-2-2",
-    "Icon": "🫣"
-}

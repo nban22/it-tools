@@ -2,15 +2,14 @@
 @layout AuthLayout
 
 @using System.ComponentModel.DataAnnotations
-@using it_tools.Services
-@inject UserService UserService
+@inject IUserService UserService
 @inject NavigationManager NavigationManager
 @inject ILogger<Login> Logger
 @inject IHttpContextAccessor HttpContextAccessor
 
 <PageTitle>Log in</PageTitle>
 
-<button class="mb-4 w-10 h-10 flex items-center justify-center bg-white rounded-full shadow-md" @onclick="HandleClick">
+<button class="mb-4 w-10 h-10 flex items-center justify-center bg-white rounded-full shadow-md" @onclick="HandleBackNavigationClick">
     <HeroIcon Name="arrow-left-square" class="w-6 h-6 text-black" />
 </button>
 <h1 class="text-3xl font-bold text-black mb-6">Welcome back! Glad to see you, Again!</h1>
@@ -76,10 +75,10 @@
     private string? errorMessage;
     private bool showPassword = false;
 
-    private void HandleClick()
+    private void HandleBackNavigationClick()
     {
-        Logger.LogInformation("Navigating to home page.");
-        // NavigationManager.NavigateTo("/");
+        Logger.LogInformation("Back navigation clicked >>>>> ", HttpContextAccessor.HttpContext?.Request.Headers["Referer"].ToString());
+        NavigationManager.NavigateTo(HttpContextAccessor.HttpContext?.Request.Headers["Referer"].ToString() ?? "/");
     }
 
     private void ToggleEye()

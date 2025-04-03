@@ -1,5 +1,6 @@
-@using it_tools.Data
-@using it_tools.Repositories
+@using it_tools.Data.DTOs
+
+@inject NavigationManager Navigation
 
 <div class="mb-6">
     <div class="flex items-center justify-between mb-4">
@@ -16,7 +17,10 @@
         {
             @foreach (var tool in Tools)
             {
-                <ToolCard Tool="tool as ITool" />
+                if (tool.IsFavorite)
+                {
+                    <ToolCard Tool="tool" OnToolClick=@(() => NavigateToTool(tool)) />
+                }
             }
         }
     </div>
@@ -24,5 +28,12 @@
 
 @code {
     [Parameter]
-    public List<ITool>? Tools { get; set; }
+    public List<ToolDto>? Tools { get; set; }
+    private void NavigateToTool(ToolDto? tool)
+    {
+        if (tool != null && !string.IsNullOrEmpty(tool.Slug))
+        {
+            Navigation.NavigateTo($"/tools/{tool.Slug}");
+        }
+    }
 }

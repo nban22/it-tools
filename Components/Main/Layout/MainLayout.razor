@@ -1,0 +1,87 @@
+﻿@inherits LayoutComponentBase
+@using Microsoft.AspNetCore.Components.Authorization
+@inject NavigationManager NavigationManager
+@using it_tools.Data.Services
+@inject AuthenticationStateProvider AuthStateProvider
+
+<div class="flex h-screen w-screen bg-gray-100">
+    <!-- Sidebar Container -->
+    <div class="@GetSidebarClass() border-r border-gray-200">
+        <NavMenu />
+    </div>
+
+    <main class="flex-1 flex min-h-0 flex-col">
+        <!-- Topbar -->
+        <div class="h-16 bg-white shadow-sm flex justify-between items-center px-6">
+            <div>
+                <button @onclick="ToggleSidebar" 
+                        class="p-2 text-gray-600 hover:text-teal-600 rounded-full hover:bg-gray-100 transition-colors duration-150">
+                    <HeroIcon Name="bars-3" class="w-6 h-6" />
+                </button>
+            </div>
+
+            <AuthorizeView>
+    <Authorized>
+        <div class="flex items-center space-x-2">
+            <div class="flex items-center mr-2">
+                <div class="h-8 w-8 rounded-full bg-teal-100 flex items-center justify-center text-teal-600 font-semibold">
+                    @(context.User?.Identity?.Name?[0].ToString().ToUpper() ?? "U")
+                </div>
+                <span class="ml-2 text-gray-700 font-medium">@context.User?.Identity?.Name</span>
+            </div>
+            <div>
+                <button @onclick=@(() => NavigationManager.NavigateTo("/logout", true))
+                        class="bg-gray-700 text-white px-4 py-2 rounded-md hover:bg-gray-800
+                               transition-colors duration-150 font-medium text-sm shadow-sm">
+                    @* <HeroIcon Name="arrow-right-on-rectangle" class="w-4 h-4 mr-1" /> *@
+                    Logout
+                </button>
+            </div>
+        </div>
+    </Authorized>
+    <NotAuthorized>
+        <div class="flex items-center space-x-3">
+            <button class="bg-teal-600 text-white px-4 py-2 rounded-md hover:bg-teal-700
+                           transition-colors duration-150 font-medium text-sm shadow-sm"
+                    @onclick=@(() => NavigationManager.NavigateTo("/login"))>
+                Login
+            </button>
+            <button class="bg-gray-700 text-white px-4 py-2 rounded-md hover:bg-gray-800
+                           transition-colors duration-150 font-medium text-sm shadow-sm"
+                    @onclick=@(() => NavigationManager.NavigateTo("/signup"))>
+                Signup
+            </button>
+        </div>
+    </NotAuthorized>
+</AuthorizeView>
+
+            
+        </div>
+
+        <!-- Content Area -->
+        <div class="flex-1 overflow-y-auto p-6 bg-gray-50">
+            @Body
+        </div>
+    </main>
+</div>
+
+@code {
+    private bool isSidebarOpen = true;
+    private bool isMobile => System.OperatingSystem.IsBrowser() && JS != null ? 
+        JS.InvokeAsync<bool>("eval", "() => window.innerWidth < 768").Result : false;
+
+    private string GetSidebarClass()
+    {
+        return isMobile
+            ? $"fixed inset-y-0 left-0 w-72 bg-white shadow-lg transform transition-transform duration-300 ease-in-out z-50 {(isSidebarOpen ? "translate-x-0" : "-translate-x-full")}"
+            : $"bg-white h-screen w-72 {(isSidebarOpen ? "shadow-lg" : "hidden")}";
+    }
+
+    private void ToggleSidebar()
+    {
+        isSidebarOpen = !isSidebarOpen;
+    }
+
+    [Inject]
+    private IJSRuntime? JS { get; set; }
+}

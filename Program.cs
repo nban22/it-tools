@@ -3,8 +3,8 @@ using it_tools.Components;
 using it_tools.Data;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using it_tools.Components.Auth;
-using it_tools.Services;
-using it_tools.Repositories;
+using it_tools.Data.Services;
+using it_tools.Data.Repositories;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -38,14 +38,21 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
 // });
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
-builder.Services.AddDbContext<ApplicationDbContext>(options => 
+builder.Services.AddDbContextFactory<ApplicationDbContext>(options =>
     options.UseNpgsql(connectionString));
 
-
-builder.Services.AddScoped<UserService>();
-builder.Services.AddScoped<EmailService>();
+builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<IEmailService ,EmailService>();
 builder.Services.AddScoped<IToolRepository, ToolRepository>();
-builder.Services.AddScoped<UserRepository>();
+builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IToolService, ToolService>();
+// Add this to your service configuration
+builder.Services.AddScoped<ToolStateService>();
+builder.Services.AddScoped<IToolGroupRepository, ToolGroupRepository>();
+
+
+// // Thêm này nếu bạn sử dụng Blazor Server với ProtectedSessionStorage
+// builder.Services.AddScoped<ProtectedSessionStorage>();
 
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 var app = builder.Build();

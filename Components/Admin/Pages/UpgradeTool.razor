@@ -1,70 +1,83 @@
 @page "/admin/tools/upgrade"
 @using Microsoft.EntityFrameworkCore
 @layout it_tools.Components.Admin.Layout.AdminLayout
-@inject it_tools.Data.ApplicationDbContext DbContext
+@inject it_tools.Data.Repositories.IToolRepository ToolRepository
 
 <h3 class="text-xl font-semibold text-gray-800 mb-6">Nâng/Hạ cấp công cụ</h3>
 
-@if (tools == null)
+@if (allToolGroups == null)
 {
     <p>Đang tải...</p>
 }
 else
 {
     <ul class="space-y-4">
-        @foreach (var tool in tools)
+        @if (allToolGroups != null)
         {
-            <li class="flex justify-between items-center p-4 bg-white rounded-lg shadow">
-                <span class="text-gray-700">@tool.Name - Bậc hiện tại: 
-                    @{
-                        if (tool.IsPremium)
+            @foreach (var toolGroup in allToolGroups)
+                @if (toolGroup.Tools != null)
+                {
+                    @foreach (var tool in toolGroup.Tools)
+                    {
                         {
-                            <text>Premium</text>
+                            <li class="flex justify-between items-center p-4 bg-white rounded-lg shadow">
+                                <span class="text-gray-700">@tool.Name - Bậc hiện tại:
+                                    @{
+                                        if (tool.IsPremium)
+                                        {
+                                            <text>Premium</text>
+                                        }
+                                        else
+                                        {
+                                            <text>Normal</text>
+                                        }
+                                    }
+                                </span>
+                                <div>
+                                    <button @onclick="() => UpgradeToolAction(tool)"
+                                        class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 mr-2">
+                                        Nâng cấp
+                                    </button>
+                                    <button @onclick="() => DowngradeToolAction(tool)"
+                                        class="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600">
+                                        Hạ cấp
+                                    </button>
+                                </div>
+                            </li>
                         }
-                        else
-                        {
-                            <text>Normal</text>
-                        }
+
+
                     }
-                </span>
-                <div>
-                    <button @onclick="() => UpgradeToolAction(tool)" 
-                            class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 mr-2">
-                        Nâng cấp
-                    </button>
-                    <button @onclick="() => DowngradeTool(tool)" 
-                            class="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600">
-                        Hạ cấp
-                    </button>
-                </div>
-            </li>
+                }
         }
     </ul>
 }
 
 @code {
-    private List<Tool>? tools;
+    private List<ToolGroupDto>? allToolGroups;
 
     protected override async Task OnInitializedAsync()
     {
-        tools = await DbContext.Tools.ToListAsync();
+        
+        allToolGroups = await ToolRepository.GetAllToolGroupsForAdminAsync();
+        
     }
 
-    private async Task UpgradeToolAction(Tool tool)
+    private async Task UpgradeToolAction(ToolDto tool)
     {
         if (tool.IsPremium == false)
         {
+            await ToolRepository.UpdateToolPremiumStatusAsync(tool.Id, true);
             tool.IsPremium = true;
         }
-        await DbContext.SaveChangesAsync();
     }
 
-    private async Task DowngradeTool(Tool tool)
+    private async Task DowngradeToolAction(ToolDto tool)
     {
         if (tool.IsPremium == true)
         {
+            await ToolRepository.UpdateToolPremiumStatusAsync(tool.Id, false);
             tool.IsPremium = false;
         }
-        await DbContext.SaveChangesAsync();
     }
 }

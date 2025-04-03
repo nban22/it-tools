@@ -2,42 +2,51 @@
 
 @using Microsoft.EntityFrameworkCore
 @layout it_tools.Components.Admin.Layout.AdminLayout
-@inject it_tools.Data.ApplicationDbContext DbContext
+@inject it_tools.Data.Services.IToolService ToolService
+@inject it_tools.Data.Repositories.IToolRepository ToolRepository
 
 <h3 class="text-xl font-semibold text-gray-800 mb-6">Xóa công cụ</h3>
 
-@if (tools == null)
+@if (allToolGroups == null)
 {
     <p>Đang tải...</p>
 }
 else
 {
     <ul class="space-y-4">
-        @foreach (var tool in tools)
+        @foreach (var toolGroup in allToolGroups)
         {
-            <li class="flex justify-between items-center p-4 bg-white rounded-lg shadow">
-                <span class="text-gray-700">@tool.Name</span>
-                <button @onclick=@(() => DeleteSelectedTool(tool)) 
-                        class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">
-                    Xóa
-                </button>
-            </li>
+            if (toolGroup.Tools != null)
+            {
+                @foreach (var tool in toolGroup.Tools)
+                {
+                    <li class="flex flex-col p-4 bg-white rounded-lg shadow space-y-2">
+                        <span class="text-gray-900 font-bold">@toolGroup.Name</span>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-700">@tool.Name</span>
+                            <button @onclick=@(() => DeleteSelectedTool(tool))
+                                class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">
+                                Xóa
+                            </button>
+                        </div>
+                    </li>
+                }
+            }
         }
     </ul>
 }
 
 @code {
-    private List<Tool>? tools;
+    private List<ToolGroupDto>? allToolGroups;
 
     protected override async Task OnInitializedAsync()
     {
-        tools = await DbContext.Tools.ToListAsync();
+        allToolGroups = await ToolRepository.GetAllToolGroupsForAdminAsync();
+        @* tools = allToolGroups.SelectMany(g => g.Tools).ToList(); // Lấy danh sách công cụ từ tất cả các nhóm *@
     }
 
-    private async Task DeleteSelectedTool(Tool tool)
+    private async Task DeleteSelectedTool(ToolDto tool)
     {
-        DbContext.Tools.Remove(tool);
-        await DbContext.SaveChangesAsync();
-        tools = await DbContext.Tools.ToListAsync(); // Cập nhật danh sách sau khi xóa
+        await ToolService.DeleteToolAsync(tool.Id);
     }
 }

@@ -1,13 +1,10 @@
 using Microsoft.EntityFrameworkCore;
+using it_tools.Data.Models;
 
 namespace it_tools.Data;
 
-public class ApplicationDbContext : DbContext
+public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : DbContext(options)
 {
-    public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
-        : base(options)
-    {
-    }
     public DbSet<ToolGroup> ToolGroups { get; set; }
     public DbSet<Tool> Tools { get; set; }
     public DbSet<User> Users { get; set; }
@@ -16,10 +13,19 @@ public class ApplicationDbContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        // Định nghĩa khóa chính cho các bảng
+        modelBuilder.Entity<ToolGroup>().HasKey(tg => tg.Id);
+        modelBuilder.Entity<Tool>().HasKey(t => t.Id);
+        modelBuilder.Entity<User>().HasKey(u => u.Id);
+        modelBuilder.Entity<FavouriteTool>().HasKey(ft => ft.Id);
+        modelBuilder.Entity<Admin>().HasKey(a => a.Id);
+
+        
+
         base.OnModelCreating(modelBuilder);
         modelBuilder.Entity<Tool>()
         .HasOne(t => t.Group)
-        .WithMany()
+        .WithMany(g => g.Tools)
         .HasForeignKey(t => t.GroupId);
 
         // Quan hệ giữa FavouriteTool và User

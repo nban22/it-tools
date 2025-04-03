@@ -1,16 +1,19 @@
 @page "/"
-@layout MainLayout
 
-@using it_tools.Data
-@using it_tools.Components.Main.Components
-@using it_tools.Components.Layout
-@inject IToolRepository ToolRepository
-@inject AuthenticationStateProvider AuthStateProvider
-@inject ILogger<Home> Logger
-@inject ApplicationDbContext DbContext
-@using it_tools.Repositories
 @using Microsoft.AspNetCore.Components.Authorization
 @using System.Security.Claims
+
+@using it_tools.Data.DTOs;
+@using it_tools.Data.Repositories;
+@using it_tools.Data
+@using it_tools.Components.Main.Components
+@using it_tools.Data.Services
+
+@inject IToolRepository ToolRepository
+@inject AuthenticationStateProvider AuthStateProvider
+@inject ToolStateService ToolStateService
+@inject ILogger<Home> Logger
+@implements IDisposable
 
 <PageTitle>
     Home
@@ -19,55 +22,27 @@
 <div class="py-6">
     @if (isAuthenticated)
     {
-        <FavoriteToolsSection Tools="toolsForUser?.Where(t => t.IsFavorite).Select(t => (ITool)t).ToList() ?? new List<ITool>()" />
-        <AllToolsSection Tools="toolsForUser?.Select(t => (ITool)t).ToList() ?? new List<ITool>()" />
+        <FavoriteToolsSection Tools="tools" />
+        <AllToolsSection Tools="tools" />
     }
     else
     {
-        <AllToolsSection Tools="toolsUnauthorized?.Select(t => (ITool)t).ToList() ?? new List<ITool>()" />
+        <AllToolsSection Tools="tools" />
     }
 </div>
 
 @code {
-    private List<Tool>? toolsUnauthorized;
-    private List<ToolDto>? toolsForUser;
+    private List<ToolDto>? tools;
     private bool isAuthenticated;
 
     protected override async Task OnInitializedAsync()
     {
-        Logger.LogInformation("Initializing home page");
-        
         try
         {
-            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
-            var user = authState.User;
-            Logger.LogInformation("User identity: {UserIdentity}", user.Identity?.Name);
-            Logger.LogInformation("User authentication state: {IsAuthenticated}", user.Identity?.IsAuthenticated);
-
-            if (user.Identity?.IsAuthenticated == true)
-            {
-                isAuthenticated = true;
-                // Lấy email từ ClaimTypes.Name
-                string email = user.FindFirst(ClaimTypes.Name)?.Value ?? "unknown";
-                // Truy vấn DbContext để lấy userId dựa trên email
-                string userId = DbContext.Users.FirstOrDefault(u => u.Email == email)?.Id ?? "unknown";
-                Logger.LogInformation("Loading tools for authenticated user with Email/ID {UserId}", userId);
-                
-                toolsForUser = await ToolRepository.GetToolsForUserAsync(userId);
-                
-                Logger.LogInformation("Successfully loaded {ToolCount} tools for user {UserId}", 
-                    toolsForUser?.Count ?? 0, userId);
-            }
-            else
-            {
-                isAuthenticated = false;
-                Logger.LogInformation("Loading tools for unauthorized user");
-                
-                toolsUnauthorized = await ToolRepository.GetToolsForUnauthorizedAsync();
-                
-                Logger.LogInformation("Successfully loaded {ToolCount} tools for unauthorized user", 
-                    toolsUnauthorized?.Count ?? 0);
-            }
+            // Subscribe to tool favorite changes
+            ToolStateService.OnToolFavoriteChanged += HandleToolFavoriteChanged;
+            
+            await LoadTools();
         }
         catch (Exception ex)
         {
@@ -76,9 +51,41 @@
         }
     }
 
-    // Đảm bảo dispose DbContext nếu cần (cho Blazor Server)
+    private async Task LoadTools()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            isAuthenticated = true;
+            string userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "unknown";
+            tools = await ToolRepository.GetAllToolsForUserAsync(userId);
+        }
+        else
+        {
+            isAuthenticated = false;
+            tools = await ToolRepository.GetAllToolsForUnauthorizedAsync();
+        }
+    }
+
+    // Handle tool favorite changes
+    private void HandleToolFavoriteChanged(ToolDto updatedTool)
+    {
+        if (tools != null)
+        {
+            // Find and update the tool in our local collection
+            var toolToUpdate = tools.FirstOrDefault(t => t.Id == updatedTool.Id);
+            if (toolToUpdate != null)
+            {
+                toolToUpdate.IsFavorite = updatedTool.IsFavorite;
+                StateHasChanged(); // Force UI update
+            }
+        }
+    }
+
     public void Dispose()
     {
-        DbContext?.Dispose();
+        // Unsubscribe when component is disposed
+        ToolStateService.OnToolFavoriteChanged -= HandleToolFavoriteChanged;
     }
 }

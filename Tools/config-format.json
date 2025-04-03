@@ -1,9 +1,0 @@
-{
-    "Name": "Tool Name",
-    "Description": "Tool Description",
-    "Group": "General",
-    "TypeName": "Tool",
-    "Namespace": "Tools",
-    "Slug": "tool-name",
-    "Icon": "🫣"
-}
