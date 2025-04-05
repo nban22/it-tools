@@ -1,4 +1,5 @@
 @using it_tools.Data
+@using it_tools.Data.DTOs
 @inject NavigationManager Navigation
 
 <div>
@@ -8,7 +9,7 @@
         {
             foreach (var tool in Tools)
             {
-                <ToolCard Tool="tool as ITool" OnToolClick="() => NavigateToTool(tool as Tool)" />
+                <ToolCard Tool="tool" OnToolClick=@(() => NavigateToTool(tool)) />
             }
         }
     </div>
@@ -16,9 +17,9 @@
 
 @code {
     [Parameter]
-    public List<ITool>? Tools { get; set; }
+    public List<ToolDto>? Tools { get; set; }
 
-    private void NavigateToTool(Tool? tool)
+    private void NavigateToTool(ToolDto? tool)
     {
         if (tool != null && !string.IsNullOrEmpty(tool.Slug))
         {

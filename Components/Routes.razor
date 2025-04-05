@@ -1,8 +1,9 @@
-﻿@using it_tools.Components.Account.Shared
+﻿@using it_tools.Components.Auth.Shared
+@using it_tools.Components.Main.Layout
 @rendermode InteractiveServer
 <Router AppAssembly="typeof(Program).Assembly">
     <Found Context="routeData">
-        <AuthorizeRouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)">
+        <AuthorizeRouteView RouteData="routeData" DefaultLayout="typeof(MainLayout)">
             <NotAuthorized>
                 <RedirectToLogin />
             </NotAuthorized>

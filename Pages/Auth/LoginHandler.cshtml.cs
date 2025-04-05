@@ -4,18 +4,13 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using System.Security.Claims;
-using it_tools.Services;
+using it_tools.Data.Services;
 
 namespace it_tools.Pages.Auth;
 
-public class LoginHandlerModel : PageModel
+public class LoginHandlerModel(IUserService userService) : PageModel
 {
-    private readonly UserService _userService;
-
-    public LoginHandlerModel(UserService userService)
-    {
-        _userService = userService;
-    }
+    private readonly IUserService _userService = userService;
 
     public async Task<IActionResult> OnGetAsync(string email, bool rememberMe, string returnUrl)
     {

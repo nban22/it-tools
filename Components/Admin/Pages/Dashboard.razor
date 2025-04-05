@@ -1,7 +1,8 @@
 @page "/admin/dashboard"
 @using Microsoft.EntityFrameworkCore
 @layout it_tools.Components.Admin.Layout.AdminLayout
-@inject it_tools.Data.ApplicationDbContext DbContext
+@inject IDbContextFactory<it_tools.Data.ApplicationDbContext> DbContextFactory
+@using it_tools.Data.Models
 
 <h3 class="text-xl font-semibold text-gray-800 mb-6">Dashboard</h3>
 
@@ -41,7 +42,7 @@ else
                 {
                     <li class="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
                         <div>
-                            <span class="text-gray-700 font-medium">@tool.Title</span>
+                            <span class="text-gray-700 font-medium">@tool.Name</span>
                             <span class="block text-sm text-gray-500">@(tool.IsPremium ? "Premium" : "Không Premium") | @(tool.IsEnabled ? "Hoạt động" : "Vô hiệu")</span>
                         </div>
                         <a href="@($"/admin/tools/activate")" class="text-blue-500 hover:underline">Quản lý</a>
@@ -65,9 +66,10 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        var allTools = await DbContext.Tools.ToListAsync();
-        
-        totalTools = allTools.Count;
+        using var dbContext = await DbContextFactory.CreateDbContextAsync();
+        var allTools = await dbContext.Tools.ToListAsync();
+
+        totalTools = allTools.Count();
         activeTools = allTools.Count(t => t.IsEnabled);
         premiumTools = allTools.Count(t => t.IsPremium); // Chỉ đếm công cụ Premium
         recentTools = allTools.OrderByDescending(t => t.Id).Take(5).ToList(); // Lấy 5 công cụ gần đây nhất

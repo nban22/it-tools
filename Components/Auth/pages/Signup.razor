@@ -2,15 +2,17 @@
 
 @layout AuthLayout
 
-@inject UserService UserService
-@inject EmailService EmailService
+@inject IUserService UserService
+@inject IEmailService EmailService
 @inject ILogger<Signup> Logger
 @inject NavigationManager NavigationManager
+@inject IHttpContextAccessor HttpContextAccessor
 
 <PageTitle>Sign up</PageTitle>
 
 <!-- Nút quay lại (giữ nguyên) -->
-<button class="mb-4 w-10 h-10 flex items-center justify-center bg-white rounded-full shadow-md">
+<button class="mb-4 w-10 h-10 flex items-center justify-center bg-white rounded-full shadow-md"
+    @onclick="HandleBackNavigationClick">
     <HeroIcon Name="arrow-left-square" class="w-6 h-6 text-black" />
 </button>
 
@@ -84,6 +86,13 @@
     private bool showPassword = false;
     private bool showConfirmPassword = false;
     private string? errorMessage;
+
+    private void HandleBackNavigationClick()
+    {
+        Logger.LogInformation("Back navigation clicked >>>>> ",
+        HttpContextAccessor.HttpContext?.Request.Headers["Referer"].ToString());
+        NavigationManager.NavigateTo(HttpContextAccessor.HttpContext?.Request.Headers["Referer"].ToString() ?? "/");
+    }
 
     private void TogglePasswordVisibility()
     {

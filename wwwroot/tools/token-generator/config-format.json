@@ -1,0 +1,10 @@
+{
+    "Name": "An's Generator",
+    "Description": "Tool Description",
+    "GroupName": "General 22222",
+	"GroupDescription": "General Tools",
+    "TypeName": "TokenGenerator",
+    "Namespace": "TokenGeneratorTool",
+    "Slug": "token-generator",
+    "Icon": "🫣"
+}

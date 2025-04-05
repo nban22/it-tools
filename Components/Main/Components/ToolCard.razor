@@ -1,9 +1,11 @@
-@using it_tools.Data
-@using it_tools.Repositories
+@using it_tools.Data.Repositories
+@using it_tools.Data.DTOs
 @using Microsoft.AspNetCore.Components.Authorization
+@using it_tools.Data.Services
 @inject NavigationManager NavigationManager
-@inject UserRepository UserRepo
+@inject IUserRepository UserRepository
 @inject AuthenticationStateProvider AuthenticationStateProvider
+@inject ToolStateService ToolStateService
 @using System.Security.Claims
 
 <div class="bg-white border border-gray-200 shadow-sm rounded-lg p-4 flex items-start justify-between hover:shadow-md transition-shadow cursor-pointer"
@@ -18,7 +20,7 @@
     <button class="flex items-center space-x-2" 
             @onclick="HandleFavoriteClick" 
             @onclick:stopPropagation>
-        <svg class="w-5 h-5 @(Tool is ToolDto dto && dto.IsFavorite ? "text-green-500" : "text-gray-300")"
+        <svg class="w-5 h-5 @(Tool?.IsFavorite == true ? "text-green-500" : "text-gray-300")"
              fill="currentColor" 
              viewBox="0 0 24 24" 
              xmlns="http://www.w3.org/2000/svg">
@@ -31,13 +33,13 @@
 {
     <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
         <div class="bg-white rounded-lg p-6 w-96">
-            <h3 class="text-lg font-semibold text-gray-800">Yêu cầu đăng nhập</h3>
-            <p class="text-sm text-gray-600 mt-2">Bạn cần đăng nhập để thêm công cụ vào danh sách yêu thích. Bạn có muốn đăng nhập ngay bây giờ không?</p>
+            <h3 class="text-lg font-semibold text-gray-800">Login Required</h3>
+            <p class="text-sm text-gray-600 mt-2">You need to log in to add tools to your favorites list. Would you like to log in now?</p>
             <div class="mt-4 flex justify-end space-x-2">
                 <button class="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300"
-                        @onclick="CloseModal">Hủy</button>
+                        @onclick="CloseModal">Cancel</button>
                 <button class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600" 
-                        @onclick="RedirectToLogin">Đăng nhập</button>
+                        @onclick="RedirectToLogin">Login</button>
             </div>
         </div>
     </div>
@@ -45,7 +47,7 @@
 
 @code {
     [Parameter]
-    public ITool? Tool { get; set; }
+    public ToolDto? Tool { get; set; }
 
     [Parameter]
     public EventCallback OnToolClick { get; set; }
@@ -69,7 +71,7 @@
             {
                 try
                 {
-                    var favoriteTools = await UserRepo.GetFavoriteTools(currentUserId);
+                    var favoriteTools = await UserRepository.GetFavoriteTools(currentUserId);
                     dto.IsFavorite = favoriteTools.Any(t => t.Id == dto.Id);
                 }
                 catch
@@ -94,14 +96,18 @@
             {
                 if (dto.IsFavorite)
                 {
-                    await UserRepo.RemoveFavoriteTool(currentUserId, dto.Id);
+                    await UserRepository.RemoveFavoriteTool(currentUserId, dto.Id);
                     dto.IsFavorite = false;
                 }
                 else
                 {
-                    await UserRepo.AddFavoriteTool(currentUserId, dto.Id);
+                    await UserRepository.AddFavoriteTool(currentUserId, dto.Id);
                     dto.IsFavorite = true;
                 }
+                
+                // Notify other components that the tool's favorite status has changed
+                ToolStateService.NotifyToolFavoriteChanged(dto);
+                
                 StateHasChanged();
             }
             catch
