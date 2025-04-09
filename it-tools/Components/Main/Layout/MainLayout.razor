@@ -1,8 +1,19 @@
 ﻿@inherits LayoutComponentBase
 @using Microsoft.AspNetCore.Components.Authorization
+@using it_tools.Components.Main.Components
 @inject NavigationManager NavigationManager
 @using it_tools.Data.Services
 @inject AuthenticationStateProvider AuthStateProvider
+@inject IJSRuntime JSRuntime
+
+@implements IAsyncDisposable
+
+<PageTitle>IT-Tools</PageTitle>
+
+<!-- Add reference to our JavaScript file -->
+<HeadContent>
+    <script src="js/search.js"></script>
+</HeadContent>
 
 <div class="flex h-screen w-screen bg-gray-100">
     <!-- Sidebar Container -->
@@ -13,49 +24,76 @@
     <main class="flex-1 flex min-h-0 flex-col">
         <!-- Topbar -->
         <div class="h-16 bg-white shadow-sm flex justify-between items-center px-6">
-            <div>
+            <div class="flex items-center space-x-2">
                 <button @onclick="ToggleSidebar" 
                         class="p-2 text-gray-600 hover:text-teal-600 rounded-full hover:bg-gray-100 transition-colors duration-150">
-                    <HeroIcon Name="bars-3" class="w-6 h-6" />
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                    </svg>
                 </button>
+                
+                <!-- Home Button -->
+                <button @onclick=@(() => NavigationManager.NavigateTo("/", true))
+                        class="p-2 text-gray-600 hover:text-teal-600 rounded-full hover:bg-gray-100 transition-colors duration-150 flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                    </svg>
+                    <span class="ml-1 text-sm hidden md:inline">Home</span>
+                </button>
+                
+                <div class="ml-1">
+                    <SearchBox />
+                </div>
             </div>
 
             <AuthorizeView>
-    <Authorized>
-        <div class="flex items-center space-x-2">
-            <div class="flex items-center mr-2">
-                <div class="h-8 w-8 rounded-full bg-teal-100 flex items-center justify-center text-teal-600 font-semibold">
-                    @(context.User?.Identity?.Name?[0].ToString().ToUpper() ?? "U")
-                </div>
-                <span class="ml-2 text-gray-700 font-medium">@context.User?.Identity?.Name</span>
-            </div>
-            <div>
-                <button @onclick=@(() => NavigationManager.NavigateTo("/logout", true))
-                        class="bg-gray-700 text-white px-4 py-2 rounded-md hover:bg-gray-800
-                               transition-colors duration-150 font-medium text-sm shadow-sm">
-                    @* <HeroIcon Name="arrow-right-on-rectangle" class="w-4 h-4 mr-1" /> *@
-                    Logout
-                </button>
-            </div>
-        </div>
-    </Authorized>
-    <NotAuthorized>
-        <div class="flex items-center space-x-3">
-            <button class="bg-teal-600 text-white px-4 py-2 rounded-md hover:bg-teal-700
-                           transition-colors duration-150 font-medium text-sm shadow-sm"
-                    @onclick=@(() => NavigationManager.NavigateTo("/login"))>
-                Login
-            </button>
-            <button class="bg-gray-700 text-white px-4 py-2 rounded-md hover:bg-gray-800
-                           transition-colors duration-150 font-medium text-sm shadow-sm"
-                    @onclick=@(() => NavigationManager.NavigateTo("/signup"))>
-                Signup
-            </button>
-        </div>
-    </NotAuthorized>
-</AuthorizeView>
-
-            
+                <Authorized>
+                    <div class="flex items-center space-x-2">
+                        <div class="hidden md:flex items-center mr-2">
+                            <div class="h-8 w-8 rounded-full bg-teal-100 flex items-center justify-center text-teal-600 font-semibold">
+                                @(context.User?.Identity?.Name?[0].ToString().ToUpper() ?? "U")
+                            </div>
+                            <span class="ml-2 text-gray-700 font-medium">@context.User?.Identity?.Name</span>
+                        </div>
+                        <div>
+                            <button @onclick=@(() => NavigationManager.NavigateTo("/logout", true))
+                                    class="bg-gray-700 text-white px-4 py-2 rounded-md hover:bg-gray-800
+                                           transition-colors duration-150 font-medium text-sm shadow-sm">
+                                <span class="hidden sm:inline">Logout</span>
+                                <span class="sm:hidden">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 001 1h12a1 1 0 001-1V4a1 1 0 00-1-1H3zm11 3a1 1 0 10-2 0v6.586l-1.293-1.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L14 12.586V6z" clip-rule="evenodd" />
+                                    </svg>
+                                </span>
+                            </button>
+                        </div>
+                    </div>
+                </Authorized>
+                <NotAuthorized>
+                    <div class="flex items-center space-x-3">
+                        <button class="bg-teal-600 text-white px-4 py-2 rounded-md hover:bg-teal-700
+                                   transition-colors duration-150 font-medium text-sm shadow-sm"
+                                @onclick=@(() => NavigationManager.NavigateTo("/login"))>
+                            <span class="hidden sm:inline">Login</span>
+                            <span class="sm:hidden">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 001 1h12a1 1 0 001-1V4a1 1 0 00-1-1H3zm11 3a1 1 0 10-2 0v6.586l-1.293-1.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L14 12.586V6z" clip-rule="evenodd" />
+                                </svg>
+                            </span>
+                        </button>
+                        <button class="bg-gray-700 text-white px-4 py-2 rounded-md hover:bg-gray-800
+                                   transition-colors duration-150 font-medium text-sm shadow-sm"
+                                @onclick=@(() => NavigationManager.NavigateTo("/signup"))>
+                            <span class="hidden sm:inline">Signup</span>
+                            <span class="sm:hidden">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                    <path d="M8 9a3 3 0 100-6 3 3 0 000 6zM8 11a6 6 0 016 6H2a6 6 0 016-6z" />
+                                </svg>
+                            </span>
+                        </button>
+                    </div>
+                </NotAuthorized>
+            </AuthorizeView>
         </div>
 
         <!-- Content Area -->
@@ -67,8 +105,52 @@
 
 @code {
     private bool isSidebarOpen = true;
-    private bool isMobile => System.OperatingSystem.IsBrowser() && JS != null ? 
-        JS.InvokeAsync<bool>("eval", "() => window.innerWidth < 768").Result : false;
+    // Default to desktop view
+    private bool isMobile = false;
+    
+    // Check if we're on mobile after the component renders
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && JS != null)
+        {
+            try
+            {
+                isMobile = await JS.InvokeAsync<bool>("eval", "window.innerWidth < 768");
+                StateHasChanged();
+                
+                // Set up resize listener
+                await JS.InvokeVoidAsync("eval", @"
+                    window.addEventListener('resize', function() {
+                        DotNet.invokeMethod('it_tools', 'UpdateIsMobile', window.innerWidth < 768);
+                    });
+                ");
+            }
+            catch
+            {
+                // Fallback to desktop view if there's an error
+                isMobile = false;
+            }
+        }
+    }
+    
+    [JSInvokable("UpdateIsMobile")]
+    public static void UpdateMobileState(bool mobile)
+    {
+        if (_instance != null)
+        {
+            _instance.isMobile = mobile;
+            _instance.StateHasChanged();
+        }
+    }
+    
+    // Static reference to the current instance
+    private static MainLayout? _instance;
+    
+    protected override void OnInitialized()
+    {
+        _instance = this;
+        base.OnInitialized();
+    }
 
     private string GetSidebarClass()
     {
@@ -84,4 +166,20 @@
 
     [Inject]
     private IJSRuntime? JS { get; set; }
+    
+    public async ValueTask DisposeAsync()
+    {
+        // Clean up any resources when the component is disposed
+        if (JS != null)
+        {
+            try
+            {
+                await JS.InvokeVoidAsync("eval", "window.toggleSearch = undefined;");
+            }
+            catch
+            {
+                // Ignore errors during disposal
+            }
+        }
+    }
 }
