@@ -13,10 +13,10 @@ public class UserRepository(IDbContextFactory<ApplicationDbContext> contextFacto
         {
             using var context = _contextFactory.CreateDbContext();
             var favorite = new FavouriteTool
-            { 
+            {
                 Id = Guid.NewGuid().ToString(),
-                UserId = userId, 
-                ToolId = toolId 
+                UserId = userId,
+                ToolId = toolId
             };
             context.FavouriteTools.Add(favorite);
             await context.SaveChangesAsync();
@@ -35,7 +35,7 @@ public class UserRepository(IDbContextFactory<ApplicationDbContext> contextFacto
             using var context = _contextFactory.CreateDbContext();
             var favorite = await context.FavouriteTools
                 .FirstOrDefaultAsync(f => f.UserId == userId && f.ToolId == toolId);
-            
+
             if (favorite != null)
             {
                 context.FavouriteTools.Remove(favorite);
@@ -62,8 +62,8 @@ public class UserRepository(IDbContextFactory<ApplicationDbContext> contextFacto
             var favoriteTools = await context.FavouriteTools
                 .Where(f => f.UserId == userId)
                 .Include(f => f.Tool)
-                .Select(f => new ToolDto 
-                { 
+                .Select(f => new ToolDto
+                {
                     Id = f.Tool != null ? f.Tool.Id : string.Empty,
                     Name = f.Tool != null ? f.Tool.Name : string.Empty,
                     Description = f.Tool != null ? f.Tool.Description : string.Empty,
@@ -79,7 +79,8 @@ public class UserRepository(IDbContextFactory<ApplicationDbContext> contextFacto
     }
 
     //Task<UserDto?> GetUserById(string userId);
-    public async Task<UserDto?> GetUserById(string userId) {
+    public async Task<UserDto?> GetUserById(string userId)
+    {
         try
         {
             using var context = _contextFactory.CreateDbContext();
@@ -113,5 +114,24 @@ public class UserRepository(IDbContextFactory<ApplicationDbContext> contextFacto
             _logger.LogError(ex, "Failed to retrieve user {UserId}", userId);
             throw;
         }
+
+
+    }
+
+    public async Task<bool> SetUserPremiumStatus(string userId, bool isPremium)
+    {
+        using var context = await _contextFactory.CreateDbContextAsync();
+
+        var user = await context.Users.FindAsync(userId);
+        if (user == null)
+        {
+            return false;
+        }
+
+        user.IsPremium = isPremium;
+        user.PremiumRequest = false; // Clear any pending requests
+
+        var result = await context.SaveChangesAsync();
+        return result > 0;
     }
 }

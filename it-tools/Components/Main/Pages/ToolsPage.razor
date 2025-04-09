@@ -164,6 +164,9 @@ else
     [Parameter]
     public string? Slug { get; set; }
 
+    [Inject]
+    private IUserRepository UserRepository { get; set; } = default!;
+
     private Type? toolComponentType;
     private string? loadError;
     private bool isLoading = true;
@@ -183,18 +186,15 @@ else
             
             if (isUserLoggedIn)
             {
-                // In a real app, you would check if the user has a premium subscription
-                // This is a simplified example - replace with your actual logic
-                isUserPremium = user.HasClaim(c => c.Type == "IsPremium" && c.Value == "true");
+                // Get the user ID from claims
+                var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 
-                // Alternative approach using user repository:
-                // var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                // if (!string.IsNullOrEmpty(userId))
-                // {
-                //     var userRepository = ScopedServices.GetRequiredService<IUserRepository>();
-                //     var userData = await userRepository.GetUserById(userId);
-                //     isUserPremium = userData?.IsPremium ?? false;
-                // }
+                if (!string.IsNullOrEmpty(userId))
+                {
+                    // Get user info from repository and check premium status
+                    var userData = await UserRepository.GetUserById(userId);
+                    isUserPremium = userData?.IsPremium ?? false;
+                }
             }
 
             using var context = await DbContextFactory.CreateDbContextAsync();

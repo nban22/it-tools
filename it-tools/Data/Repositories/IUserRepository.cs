@@ -11,4 +11,6 @@ interface IUserRepository
     Task<List<ToolDto>> GetFavoriteTools(string userId);
 
     Task<UserDto?> GetUserById(string userId);
+
+    Task<bool> SetUserPremiumStatus(string userId, bool isPremium);
 }
