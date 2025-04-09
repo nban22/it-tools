@@ -1,0 +1,110 @@
+﻿@using it_tools.ToolDevelopment.Base
+@using it_tools.ToolDevelopment.Attributes
+@using System.Text.RegularExpressions
+@attribute [ToolComponentAttribute(true)]
+@inherits ToolComponentBase
+
+<div class="p-4 bg-white rounded-lg shadow-md">
+    <h2 class="text-xl font-bold mb-4">@Name</h2>
+    <p class="text-gray-600 mb-6">@Description</p>
+    
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Markdown Input:</label>
+            <textarea 
+                @bind="_markdownInput" 
+                @bind:event="oninput"
+                class="w-full h-64 p-3 border border-gray-300 rounded-md font-mono text-sm"
+                placeholder="Type your markdown here..."></textarea>
+        </div>
+        
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Preview:</label>
+            <div class="w-full h-64 p-3 border border-gray-300 rounded-md overflow-auto bg-gray-50">
+                @((MarkupString)_renderedHtml)
+            </div>
+        </div>
+    </div>
+    
+    <div class="mt-4 flex flex-wrap gap-2">
+        <button @onclick="@(e => InsertMarkdown("# Heading 1"))" class="px-3 py-1 bg-gray-200 text-gray-800 rounded text-sm">H1</button>
+        <button @onclick="@(e => InsertMarkdown("## Heading 2"))" class="px-3 py-1 bg-gray-200 text-gray-800 rounded text-sm">H2</button>
+        <button @onclick="@(e => InsertMarkdown("### Heading 3"))" class="px-3 py-1 bg-gray-200 text-gray-800 rounded text-sm">H3</button>
+        <button @onclick="@(e => InsertMarkdown("**Bold text**"))" class="px-3 py-1 bg-gray-200 text-gray-800 rounded text-sm font-bold">B</button>
+        <button @onclick="@(e => InsertMarkdown("*Italic text*"))" class="px-3 py-1 bg-gray-200 text-gray-800 rounded text-sm italic">I</button>
+        <button @onclick="@(e => InsertMarkdown("[Link text](https://example.com)"))" class="px-3 py-1 bg-gray-200 text-gray-800 rounded text-sm">Link</button>
+        <button @onclick="@(e => InsertMarkdown("- List item"))" class="px-3 py-1 bg-gray-200 text-gray-800 rounded text-sm">List</button>
+        <button @onclick="@(e => InsertMarkdown("```\nCode block\n```"))" class="px-3 py-1 bg-gray-200 text-gray-800 rounded text-sm font-mono">Code</button>
+        <button @onclick="@(e => _markdownInput = "")" class="ml-auto px-3 py-1 bg-red-100 text-red-800 rounded text-sm">Clear</button>
+    </div>
+    
+    <div class="mt-6 text-sm text-gray-500">
+        <p>This tool supports standard Markdown syntax. Use the buttons above to insert common Markdown elements.</p>
+    </div>
+</div>
+
+@code {
+    private string _markdownInput = "";
+    private string _renderedHtml = "";
+    
+    // Implement required properties from ToolComponentBase
+    public override string Name => "Markdown Previewer";
+    public override string Description => "Write Markdown and see the rendered HTML preview in real-time";
+    public override string Group => "Text Tools";
+    public override string Icon => "📝";
+    
+    protected override void OnInitialized()
+    {
+        _markdownInput = "# Welcome to Markdown Previewer\n\nThis is a **live preview** tool for Markdown.\n\n## Features\n\n- Real-time preview\n- Common markdown syntax support\n- Easy formatting buttons\n\n```\nfunction example() {\n  console.log('Hello world');\n}\n```";
+        RenderMarkdown();
+    }
+    
+    protected override void OnParametersSet()
+    {
+        RenderMarkdown();
+    }
+    
+    private void RenderMarkdown()
+    {
+        if (string.IsNullOrEmpty(_markdownInput))
+        {
+            _renderedHtml = "";
+            return;
+        }
+        
+        // Very simple markdown renderer - in a real implementation you would use a proper library
+        string html = _markdownInput;
+        
+        // Headers
+        html = Regex.Replace(html, @"^# (.*?)$", "<h1>$1</h1>", RegexOptions.Multiline);
+        html = Regex.Replace(html, @"^## (.*?)$", "<h2>$1</h2>", RegexOptions.Multiline);
+        html = Regex.Replace(html, @"^### (.*?)$", "<h3>$1</h3>", RegexOptions.Multiline);
+        
+        // Bold and Italic
+        html = Regex.Replace(html, @"\*\*(.*?)\*\*", "<strong>$1</strong>");
+        html = Regex.Replace(html, @"\*(.*?)\*", "<em>$1</em>");
+        
+        // Code blocks
+        html = Regex.Replace(html, @"```(.*?)```", "<pre><code>$1</code></pre>", RegexOptions.Singleline);
+        
+        // Lists
+        html = Regex.Replace(html, @"^- (.*?)$", "<li>$1</li>", RegexOptions.Multiline);
+        html = html.Replace("<li>", "<ul><li>").Replace("</li>", "</li></ul>");
+        html = Regex.Replace(html, @"<\/ul>\s*<ul>", "");
+        
+        // Links
+        html = Regex.Replace(html, @"\[(.*?)\]\((.*?)\)", "<a href=\"$2\" target=\"_blank\">$1</a>");
+        
+        // Paragraphs
+        html = Regex.Replace(html, @"^([^<].*?)$", "<p>$1</p>", RegexOptions.Multiline);
+        html = Regex.Replace(html, @"<\/p>\s*<p>", "</p><p>");
+        
+        _renderedHtml = html;
+    }
+    
+    private void InsertMarkdown(string markdown)
+    {
+        _markdownInput += markdown;
+        RenderMarkdown();
+    }
+}
