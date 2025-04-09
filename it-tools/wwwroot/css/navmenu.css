@@ -1,0 +1,62 @@
+/* NavMenu Custom Styles */
+
+.wave-container {
+    position: relative;
+    background: linear-gradient(to right, #0d9488, #10b981);
+    overflow: hidden;
+}
+
+.wave-container .wave {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 60px;
+    background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 120"><path fill="white" d="M0,64L60,69.3C120,75,240,85,360,80C480,75,600,53,720,48C840,43,960,53,1080,58.7C1200,64,1320,64,1380,64L1440,64L1440,120L1380,120C1320,120,1200,120,1080,120C960,120,840,120,720,120C600,120,480,120,360,120C240,120,120,120,60,120L0,120Z"></path></svg>');
+    background-size: cover;
+    background-repeat: no-repeat;
+}
+
+/* Hover effects for menu items */
+.menu-item-hover {
+    position: relative;
+    transition: all 0.2s ease;
+}
+
+.menu-item-hover:hover {
+    background-color: rgba(13, 148, 136, 0.05);
+    padding-left: 1.25rem;
+}
+
+/* Custom scrollbar for the menu */
+.sidebar-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(13, 148, 136, 0.2) transparent;
+}
+
+.sidebar-scrollbar::-webkit-scrollbar {
+    width: 6px;
+}
+
+.sidebar-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.sidebar-scrollbar::-webkit-scrollbar-thumb {
+    background-color: rgba(13, 148, 136, 0.2);
+    border-radius: 20px;
+}
+
+/* Tool icon animation */
+.tool-icon {
+    transition: transform 0.2s ease;
+}
+
+.menu-item-hover:hover .tool-icon {
+    transform: scale(1.2);
+}
+
+/* Group toggle animation */
+.group-chevron {
+    transition: transform 0.3s ease;
+}

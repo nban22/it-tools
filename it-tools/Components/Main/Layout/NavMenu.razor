@@ -11,45 +11,56 @@
 @inject ToolStateService ToolStateService
 @inject IJSRuntime JSRuntime
 
-<!-- Header -->
-<div class="text-white bg-gradient-to-br from-teal-600 via-teal-700 to-teal-800 shadow-lg p-6 text-center w-full">
-    <h1 class="text-3xl font-extrabold tracking-tight uppercase cursor-pointer" @onclick=@(() =>
-                                                                                        NavigationManager.NavigateTo("/"))>IT - Tools</h1>
-    <p class="mt-1 text-sm font-medium text-teal-100 opacity-90">Handy tools for developers</p>
+<!-- Header with wave effect -->
+<div class="wave-container relative overflow-hidden bg-gradient-to-r from-teal-600 to-green-500 shadow-lg w-full">
+    <div class="px-5 py-6 z-10 relative">
+        <h1 class="text-3xl font-extrabold tracking-tight text-white uppercase cursor-pointer text-center" 
+            @onclick=@(() => NavigationManager.NavigateTo("/"))>
+            IT - TOOLS
+        </h1>
+        <p class="mt-1 text-sm font-medium text-teal-100 opacity-90 text-center">
+            Handy tools for developers
+        </p>
+    </div>
+    
+    <!-- Wave effect -->
+    <div class="wave"></div>
 </div>
 
 <!-- Menu -->
-<div class="flex-1 overflow-y-auto bg-gray-50">
+<div class="flex-1 overflow-y-auto bg-white sidebar-scrollbar">
     @if (DisplayToolGroups != null)
     {
         @foreach (var group in DisplayToolGroups)
         {
-            <div class="border-b border-gray-200 last:border-b-0">
+            <div class="mb-1 last:mb-0">
                 <!-- Group Header -->
                 <button @onclick="() => ToggleGroup(group)"
-                    class="w-full flex items-center justify-between px-5 py-4 text-gray-700 bg-white hover:bg-gray-100 focus:outline-none transition-colors duration-150 ease-in-out shadow-sm">
-                    <span class="font-semibold text-sm uppercase tracking-wide">@group.Name</span>
-                    <svg class="@(group.IsExpanded ? "rotate-90" : "") w-5 h-5 text-gray-500 transition-transform duration-200"
-                        fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                    </svg>
+                    class="w-full flex items-center px-6 py-3 text-gray-700 focus:outline-none transition-colors duration-150 ease-in-out hover:bg-gray-50">
+                    <div class="flex items-center">
+                        <svg class="@(group.IsExpanded ? "transform rotate-90" : "") w-4 h-4 text-gray-400 transition-transform duration-200 mr-2 group-chevron"
+                            fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                        </svg>
+                        <span class="font-medium text-sm text-gray-500">@group.Name</span>
+                    </div>
                 </button>
 
                 <!-- Group Items -->
                 @if (group.IsExpanded)
                 {
-                    <div class="bg-gray-50 pl-5 py-2">
+                    <div class="pl-8 py-1 space-y-1">
                         @if (group.Tools != null)
                         {
                             @foreach (var tool in group.Tools)
                             {
-                                <a  @onclick=@(() => NavigationManager.NavigateTo($"tools/{tool.Slug}", true))
-                                    class="flex items-center px-4 py-3 text-gray-600 hover:bg-white hover:text-teal-600 rounded-lg mx-2 my-1 transition-all duration-150 ease-in-out group">
+                                <a @onclick=@(() => NavigationManager.NavigateTo($"tools/{tool.Slug}", true))
+                                    class="flex items-center px-4 py-2.5 rounded-lg text-gray-700 hover:bg-gray-50 hover:text-teal-600 transition-all duration-150 ease-in-out cursor-pointer menu-item-hover">
                                     @if (!string.IsNullOrEmpty(tool.Icon))
                                     {
-                                        <span class="mr-3 text-lg w-5 text-center group-hover:text-teal-500">@tool.Icon</span>
+                                        <span class="mr-3 text-lg w-5 text-center text-gray-500 group-hover:text-teal-500 tool-icon">@tool.Icon</span>
                                     }
-                                    <span class="font-medium text-sm">@tool.Name</span>
+                                    <span class="text-sm font-medium">@tool.Name</span>
                                 </a>
                             }
                         }
@@ -58,6 +69,14 @@
             </div>
         }
     }
+    
+    <!-- Bottom information -->
+    <div class="mt-auto border-t border-gray-100 p-4">
+        <div class="text-xs text-gray-500 text-center">
+            <p>© 2025 IT-Tools</p>
+            <p class="mt-1">All tools in one place</p>
+        </div>
+    </div>
 </div>
 
 @code {
@@ -167,8 +186,8 @@
 
     private async Task ToggleGroup(ToolGroupDto group)
     {
-        group.IsExpanded = !group.IsExpanded; // Chỉ mở hoặc đóng nhóm hiện tại
-        await SaveExpandedStatesToLocalStorage(); // Save changes to localStorage
+        group.IsExpanded = !group.IsExpanded;
+        await SaveExpandedStatesToLocalStorage();
     }
 
     // Handle tool favorite changes

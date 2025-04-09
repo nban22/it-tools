@@ -8,38 +8,119 @@
 @inject ToolStateService ToolStateService
 @using System.Security.Claims
 
-<div class="bg-white border border-gray-200 shadow-sm rounded-lg p-4 flex items-start justify-between hover:shadow-md transition-shadow cursor-pointer"
-     @onclick="OnToolClick">
-    <div class="flex items-start space-x-3">
-        @((MarkupString)(Tool?.Icon ?? string.Empty))
-        <div>
-            <h3 class="text-lg font-semibold text-gray-800">@Tool?.Name</h3>
-            <p class="text-sm text-gray-500">@Tool?.Description</p>
+<div class="@GetCardClasses()" @onclick="HandleToolClick">
+    <div class="flex items-start space-x-3 w-full overflow-hidden">
+        <div class="flex-shrink-0 w-10 h-10 @(Tool?.IsPremium == true ? "premium-gradient" : "bg-gradient-to-r from-teal-500 to-emerald-500") rounded-lg flex items-center justify-center text-white tool-icon">
+            @((MarkupString)(Tool?.Icon ?? "<svg xmlns='http://www.w3.org/2000/svg' class='h-6 w-6' fill='none' viewBox='0 0 24 24' stroke='currentColor'><path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2'></path></svg>"))
+        </div>
+        <div class="flex-1 min-w-0 overflow-hidden">
+            <div class="flex items-center">
+                <h3 class="text-lg font-semibold text-gray-800 truncate">@Tool?.Name</h3>
+                @if (Tool?.IsPremium == true)
+                {
+                    <span class="ml-2 px-2 py-0.5 bg-amber-100 text-amber-800 text-xs font-medium rounded-full flex-shrink-0">PREMIUM</span>
+                }
+            </div>
+            <p class="text-sm text-gray-500 line-clamp-2 overflow-hidden text-ellipsis">@Tool?.Description</p>
+            @if (Tool?.Group?.Name != null)
+            {
+                <div class="mt-1.5 flex items-center text-xs text-gray-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 mr-1 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                    </svg>
+                    <span class="truncate">@Tool.Group.Name</span>
+                </div>
+            }
+        </div>
+        <div class="flex-shrink-0 ml-2 flex flex-col items-end space-y-2">
+            <button class="flex items-center justify-center w-8 h-8 rounded-full hover:bg-gray-100 transition-colors favorite-btn @(Tool?.IsFavorite == true ? "active" : "")" 
+                    @onclick="HandleFavoriteClick" 
+                    @onclick:stopPropagation>
+                <svg class="w-5 h-5 @(Tool?.IsFavorite == true ? "text-red-500" : "text-gray-300")"
+                     fill="currentColor" 
+                     viewBox="0 0 24 24" 
+                     xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+                </svg>
+            </button>
+            @if (Tool?.IsPremium == true && !userIsPremium && isLoggedIn)
+            {
+                <div class="w-8 h-8 flex items-center justify-center rounded-full bg-amber-100 flex-shrink-0">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                </div>
+            }
         </div>
     </div>
-    <button class="flex items-center space-x-2" 
-            @onclick="HandleFavoriteClick" 
-            @onclick:stopPropagation>
-        <svg class="w-5 h-5 @(Tool?.IsFavorite == true ? "text-green-500" : "text-gray-300")"
-             fill="currentColor" 
-             viewBox="0 0 24 24" 
-             xmlns="http://www.w3.org/2000/svg">
-            <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
-        </svg>
-    </button>
 </div>
 
-@if (showModal)
+@if (showLoginModal)
 {
-    <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div class="bg-white rounded-lg p-6 w-96">
-            <h3 class="text-lg font-semibold text-gray-800">Login Required</h3>
-            <p class="text-sm text-gray-600 mt-2">You need to log in to add tools to your favorites list. Would you like to log in now?</p>
-            <div class="mt-4 flex justify-end space-x-2">
-                <button class="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300"
-                        @onclick="CloseModal">Cancel</button>
-                <button class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600" 
-                        @onclick="RedirectToLogin">Login</button>
+    <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 modal-overlay" @onclick="CloseModals">
+        <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md mx-4 modal-content" @onclick:stopPropagation>
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-xl font-semibold text-gray-800">Sign in required</h3>
+                <button @onclick="CloseModals" class="text-gray-400 hover:text-gray-500">
+                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div class="mb-6">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mx-auto mb-4 text-teal-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+                </svg>
+                <p class="text-gray-600 text-center">You need to sign in to add tools to your favorites or access this tool.</p>
+            </div>
+            <div class="flex justify-end space-x-3">
+                <button @onclick="CloseModals" class="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors">
+                    Cancel
+                </button>
+                <button @onclick="RedirectToLogin" class="px-4 py-2 bg-teal-600 text-white rounded-md hover:bg-teal-700 transition-colors">
+                    Sign in
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@if (showPremiumModal)
+{
+    <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 modal-overlay" @onclick="CloseModals">
+        <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md mx-4 modal-content" @onclick:stopPropagation>
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-xl font-semibold text-gray-800">Premium Feature</h3>
+                <button @onclick="CloseModals" class="text-gray-400 hover:text-gray-500">
+                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div class="mb-6">
+                <div class="w-20 h-20 rounded-full bg-gradient-to-r from-amber-300 to-amber-500 mx-auto mb-4 flex items-center justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                </div>
+                <h4 class="text-lg font-semibold text-center mb-2">Unlock Premium Tools</h4>
+                <p class="text-gray-600 text-center">This is a premium feature. Upgrade to our premium plan to access all premium tools and features.</p>
+                <div class="mt-4 bg-amber-50 p-3 rounded-md text-sm">
+                    <div class="flex items-start">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-amber-600 mr-2 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span>Premium gives you access to all tools, priority support, and no ads.</span>
+                    </div>
+                </div>
+            </div>
+            <div class="flex justify-end space-x-3">
+                <button @onclick="CloseModals" class="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors">
+                    Maybe later
+                </button>
+                <button @onclick="RedirectToUpgrade" class="px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-md hover:from-amber-600 hover:to-amber-700 transition-colors">
+                    Upgrade to Premium
+                </button>
             </div>
         </div>
     </div>
@@ -52,9 +133,11 @@
     [Parameter]
     public EventCallback OnToolClick { get; set; }
 
-    private bool showModal = false;
+    private bool showLoginModal = false;
+    private bool showPremiumModal = false;
     private string? currentUserId;
-    private bool isLoggedIn;
+    private bool isLoggedIn = false;
+    private bool userIsPremium = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -66,19 +149,49 @@
         if (isLoggedIn)
         {
             currentUserId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
-            if (Tool is ToolDto dto && !string.IsNullOrEmpty(currentUserId))
+            
+            if (!string.IsNullOrEmpty(currentUserId))
             {
                 try
                 {
-                    var favoriteTools = await UserRepository.GetFavoriteTools(currentUserId);
-                    dto.IsFavorite = favoriteTools.Any(t => t.Id == dto.Id);
+                    // Get user premium status
+                    var userData = await UserRepository.GetUserById(currentUserId);
+                    userIsPremium = userData?.IsPremium ?? false;
+                    
+                    // Check favorite status
+                    if (Tool is ToolDto dto)
+                    {
+                        var favoriteTools = await UserRepository.GetFavoriteTools(currentUserId);
+                        dto.IsFavorite = favoriteTools.Any(t => t.Id == dto.Id);
+                    }
                 }
-                catch
+                catch (Exception ex)
                 {
-                    // Consider handling the exception silently or notifying the user if needed
+                    Console.WriteLine($"Error loading user data: {ex.Message}");
                 }
             }
+        }
+    }
+
+    private async Task HandleToolClick()
+    {
+        if (Tool?.IsPremium == true)
+        {
+            if (!isLoggedIn)
+            {
+                showLoginModal = true;
+                return;
+            }
+            else if (!userIsPremium)
+            {
+                showPremiumModal = true;
+                return;
+            }
+        }
+
+        if (OnToolClick.HasDelegate)
+        {
+            await OnToolClick.InvokeAsync();
         }
     }
 
@@ -86,7 +199,7 @@
     {
         if (!isLoggedIn)
         {
-            showModal = true;
+            showLoginModal = true;
             return;
         }
 
@@ -110,21 +223,52 @@
                 
                 StateHasChanged();
             }
-            catch
+            catch (Exception ex)
             {
-                // Consider handling the exception silently or notifying the user if needed
+                Console.WriteLine($"Error updating favorite status: {ex.Message}");
             }
         }
     }
 
-    private void CloseModal()
+    private void CloseModals()
     {
-        showModal = false;
+        showLoginModal = false;
+        showPremiumModal = false;
     }
 
     private void RedirectToLogin()
     {
-        showModal = false;
+        CloseModals();
         NavigationManager.NavigateTo("/login");
+    }
+
+    private void RedirectToUpgrade()
+    {
+        CloseModals();
+        NavigationManager.NavigateTo("/upgrade");
+    }
+    
+    private string GetCardClasses()
+    {
+        var baseClasses = "bg-white border rounded-lg p-4 flex items-start justify-between transition-all duration-200 cursor-pointer tool-card w-full overflow-hidden";
+        
+        if (Tool?.IsPremium == true)
+        {
+            if (userIsPremium)
+            {
+                // Premium tool and user has premium
+                return $"{baseClasses} hover:shadow-md border-amber-200 hover:border-amber-300";
+            }
+            else
+            {
+                // Premium tool but user doesn't have premium
+                return $"{baseClasses} hover:shadow-md border-amber-200 hover:border-amber-300 premium-lock";
+            }
+        }
+        else
+        {
+            // Regular tool
+            return $"{baseClasses} hover:shadow-md border-gray-200 hover:border-gray-300";
+        }
     }
 }
