@@ -10,6 +10,7 @@
 @inject ILogger<NavMenu> _logger
 @inject ToolStateService ToolStateService
 @inject IJSRuntime JSRuntime
+@inject IUserRepository UserRepository
 
 <!-- Header with wave effect -->
 <div class="wave-container relative overflow-hidden bg-gradient-to-r from-teal-600 to-green-500 shadow-lg w-full">
@@ -55,12 +56,30 @@
                             @foreach (var tool in group.Tools)
                             {
                                 <a @onclick=@(() => NavigationManager.NavigateTo($"tools/{tool.Slug}", true))
-                                    class="flex items-center px-4 py-2.5 rounded-lg text-gray-700 hover:bg-gray-50 hover:text-teal-600 transition-all duration-150 ease-in-out cursor-pointer menu-item-hover">
-                                    @if (!string.IsNullOrEmpty(tool.Icon))
+                                    class="flex items-center justify-between px-4 py-2.5 rounded-lg text-gray-700 hover:bg-gray-50 hover:text-teal-600 transition-all duration-150 ease-in-out cursor-pointer menu-item-hover">
+                                    <div class="flex items-center min-w-0 overflow-hidden">
+                                        @if (!string.IsNullOrEmpty(tool.Icon))
+                                        {
+                                            <span class="mr-3 text-lg w-5 text-center text-gray-500 group-hover:text-teal-500 tool-icon">@tool.Icon</span>
+                                        }
+                                        <span class="text-sm font-medium truncate">@tool.Name</span>
+                                        
+                                        @if (tool.IsPremium)
+                                        {
+                                            <span class="ml-2 px-1.5 py-0.5 bg-amber-100 text-amber-800 text-xs font-medium rounded-full flex-shrink-0">PRO</span>
+                                        }
+                                    </div>
+                                    
+                                    @if (tool.IsPremium && !userIsPremium && isLoggedIn)
                                     {
-                                        <span class="mr-3 text-lg w-5 text-center text-gray-500 group-hover:text-teal-500 tool-icon">@tool.Icon</span>
+                                        <div class="ml-2 flex-shrink-0">
+                                            <span class="w-5 h-5 flex items-center justify-center rounded-full bg-amber-100">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                                                </svg>
+                                            </span>
+                                        </div>
                                     }
-                                    <span class="text-sm font-medium">@tool.Name</span>
                                 </a>
                             }
                         }
@@ -85,6 +104,7 @@
     private List<ToolGroupDto>? ToolGroups;
     private List<ToolGroupDto>? DisplayToolGroups;
     private const string LocalStorageKey = "it_tools_expanded_groups";
+    private bool userIsPremium = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -169,6 +189,16 @@
             currentUserId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (!string.IsNullOrEmpty(currentUserId))
             {
+                // Check user premium status
+                try {
+                    var userData = await UserRepository.GetUserById(currentUserId);
+                    userIsPremium = userData?.IsPremium ?? false;
+                }
+                catch (Exception ex) {
+                    _logger.LogError(ex, "Failed to get user premium status");
+                    userIsPremium = false;
+                }
+                
                 ToolGroups = await ToolRepository.GetAllToolGroups();
                 var FavoriteGroup = await ToolRepository.GetFavoriteToolGroup(currentUserId);
                 DisplayToolGroups = ToolGroups;
