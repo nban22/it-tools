@@ -1,0 +1,376 @@
+@using it_tools.Data.Services
+@using Microsoft.AspNetCore.Components.Web
+@inject ISearchService SearchService
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JSRuntime
+
+<div class="relative">
+    <!-- Search trigger button -->
+    <button @onclick="ToggleSearchBar"
+        class="p-2 text-gray-600 hover:text-teal-600 rounded-full hover:bg-gray-100 transition-colors duration-150 flex items-center">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd"
+                d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
+                clip-rule="evenodd" />
+        </svg>
+        @if (!isSearchBarOpen)
+        {
+            <span class="ml-2 text-sm hidden sm:inline">Search</span>
+        }
+    </button>
+
+    <!-- Search modal -->
+    @if (isSearchBarOpen)
+    {
+        <div class="fixed inset-0 bg-black bg-opacity-30 z-50 flex items-start justify-center pt-16 px-4"
+            @onclick="CloseSearchBar">
+            <div class="w-full max-w-2xl bg-white rounded-lg shadow-xl overflow-hidden" @onclick:stopPropagation="true">
+                <div class="relative">
+                    <!-- Search input -->
+                    <div class="flex items-center border-b border-gray-200">
+                        <div class="px-4 text-gray-500">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd"
+                                    d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
+                                    clip-rule="evenodd" />
+                            </svg>
+                        </div>
+                        <input @ref="searchInput" 
+                               value="@searchQuery" 
+                               @oninput="HandleSearchInput"
+                               @onkeydown="HandleKeyDown"
+                               class="w-full py-4 px-2 text-gray-700 focus:outline-none text-lg"
+                               placeholder="Search for tools..." 
+                               autocomplete="off" />
+                        @if (!string.IsNullOrEmpty(searchQuery))
+                        {
+                            <button @onclick="() => ClearSearch()" class="px-4 text-gray-500 hover:text-gray-700">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd"
+                                        d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                                        clip-rule="evenodd" />
+                                </svg>
+                            </button>
+                        }
+                    </div>
+
+                    <!-- Search results -->
+                    @if (isSearching)
+                    {
+                        <div class="p-4 flex justify-center">
+                            <div class="w-8 h-8 border-4 border-teal-500 border-t-transparent rounded-full animate-spin"></div>
+                        </div>
+                    }
+                    else if (searchResults.Any())
+                    {
+                        <div class="max-h-96 overflow-y-auto py-2" @ref="resultsContainer">
+                            @for (int i = 0; i < searchResults.Count; i++)
+                            {
+                                var result = searchResults[i];
+                                var isActive = i == selectedIndex;
+                                <div @key="result.Id" @onclick="() => NavigateToResult(result)"
+                                    @onmouseover="() => selectedIndex = i"
+                                    class="@(isActive ? "bg-gray-100" : "") px-4 py-3 hover:bg-gray-100 cursor-pointer transition-colors duration-150">
+                                    <div class="flex items-center">
+                                        @if (!string.IsNullOrEmpty(result.Icon))
+                                        {
+                                            <span class="mr-3 text-lg w-5 text-center text-teal-600">@result.Icon</span>
+                                        }
+                                        <div class="flex-1 min-w-0">
+                                            <div class="flex items-center">
+                                                <span class="font-medium text-gray-900 truncate">@result.Name</span>
+                                                <span
+                                                    class="ml-2 text-xs px-2 py-0.5 rounded-full @(result.Type == "Tool" ? "bg-teal-100 text-teal-800" : "bg-blue-100 text-blue-800")">
+                                                    @result.Type
+                                                </span>
+                                            </div>
+                                            <p class="text-sm text-gray-500 line-clamp-1">@result.Description</p>
+                                            @if (!string.IsNullOrEmpty(result.GroupName) && result.Type == "Tool")
+                                            {
+                                                <p class="text-xs text-gray-400 mt-1">in @result.GroupName</p>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                    else if (!string.IsNullOrEmpty(searchQuery) && !isSearching)
+                    {
+                        <div class="p-8 text-center text-gray-500">
+                            <div class="inline-flex rounded-full bg-gray-100 p-3 mb-4">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-500" fill="none"
+                                    viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M12 14a7 7 0 110-14 7 7 0 010 14z" />
+                                </svg>
+                            </div>
+                            <p class="text-lg font-medium">No results found</p>
+                            <p class="mt-1">Try different keywords or check for typos</p>
+                        </div>
+                    }
+
+                    <!-- Keyboard shortcuts hint -->
+                    <div class="border-t border-gray-200 py-2 px-4 text-xs text-gray-500 bg-gray-50 flex justify-between">
+                        <div>
+                            <span class="inline-flex items-center mr-3">
+                                <kbd class="px-1.5 py-0.5 bg-white border border-gray-300 rounded shadow-sm mr-1">↑</kbd>
+                                <kbd class="px-1.5 py-0.5 bg-white border border-gray-300 rounded shadow-sm mr-1">↓</kbd>
+                                to navigate
+                            </span>
+                            <span class="inline-flex items-center">
+                                <kbd
+                                    class="px-1.5 py-0.5 bg-white border border-gray-300 rounded shadow-sm mr-1">Enter</kbd>
+                                to select
+                            </span>
+                        </div>
+                        <div>
+                            <span class="inline-flex items-center">
+                                <kbd class="px-1.5 py-0.5 bg-white border border-gray-300 rounded shadow-sm mr-1">Esc</kbd>
+                                to close
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private bool isSearchBarOpen = false;
+    private string searchQuery = string.Empty;
+    private List<SearchResultDto> searchResults = new();
+    private bool isSearching = false;
+    private int selectedIndex = -1;
+    private ElementReference searchInput;
+    private ElementReference resultsContainer;
+
+    private CancellationTokenSource? _cancellationTokenSource;
+
+    // Static reference to the current instance
+    private static SearchBox? _instance;
+
+    protected override void OnInitialized()
+    {
+        _instance = this;
+        base.OnInitialized();
+    }
+
+    // Handle input changes
+    private async Task HandleSearchInput(ChangeEventArgs e)
+    {
+        searchQuery = e.Value?.ToString() ?? string.Empty;
+        Console.WriteLine($"Search input changed to: {searchQuery}");
+        await SearchTools();
+    }
+
+    // Toggle search modal
+    public async Task ToggleSearchBar()
+    {
+        isSearchBarOpen = !isSearchBarOpen;
+        if (isSearchBarOpen)
+        {
+            searchQuery = string.Empty;
+            searchResults.Clear();
+            StateHasChanged();
+            await Task.Delay(10); // Give UI time to render
+            await JSRuntime.InvokeVoidAsync("eval", "document.body.style.overflow = 'hidden'");
+            await FocusSearchInput();
+        }
+        else
+        {
+            await JSRuntime.InvokeVoidAsync("eval", "document.body.style.overflow = ''");
+        }
+    }
+
+    // Close search modal
+    private async Task CloseSearchBar()
+    {
+        isSearchBarOpen = false;
+        await JSRuntime.InvokeVoidAsync("eval", "document.body.style.overflow = ''");
+    }
+
+    // Focus the search input
+    private async Task FocusSearchInput()
+    {
+        try
+        {
+            await Task.Delay(50);
+            await searchInput.FocusAsync();
+        }
+        catch (Exception) { }
+    }
+
+    // Clear search input
+    private async Task ClearSearch()
+    {
+        searchQuery = string.Empty;
+        searchResults.Clear();
+        await FocusSearchInput();
+    }
+
+    // Debounced search
+    private async Task SearchTools()
+    {
+        Console.WriteLine("Logger: Beginning SearchTools method");
+        Console.WriteLine($"Logger: Current searchQuery: '{searchQuery}'");
+
+        // Cancel previous search if any
+        _cancellationTokenSource?.Cancel();
+        _cancellationTokenSource = new CancellationTokenSource();
+        var token = _cancellationTokenSource.Token;
+        Console.WriteLine("Logger: Created new cancellation token");
+
+        if (string.IsNullOrWhiteSpace(searchQuery))
+        {
+            Console.WriteLine("Logger: searchQuery is empty, clearing results and returning");
+            searchResults.Clear();
+            StateHasChanged();
+            return;
+        }
+
+        try
+        {
+            Console.WriteLine("Logger: Starting debounce delay");
+            // Delay to debounce typing
+            await Task.Delay(300, token);
+            Console.WriteLine("Logger: Debounce delay completed");
+
+            isSearching = true;
+            StateHasChanged();
+            Console.WriteLine("Logger: Set isSearching to true and called StateHasChanged");
+
+            Console.WriteLine($"Logger: Calling SearchService.SearchAsync with query: '{searchQuery}'");
+            var results = await SearchService.SearchAsync(searchQuery);
+            Console.WriteLine($"Logger: Search completed, got {results?.Count() ?? 0} results");
+
+            if (!token.IsCancellationRequested)
+            {
+                Console.WriteLine("Logger: No cancellation requested, updating search results");
+                searchResults = results ?? new List<SearchResultDto>();
+                selectedIndex = searchResults.Any() ? 0 : -1;
+                Console.WriteLine($"Logger: Updated selectedIndex to {selectedIndex}");
+            }
+            else
+            {
+                Console.WriteLine("Logger: Cancellation was requested, ignoring results");
+            }
+        }
+        catch (TaskCanceledException)
+        {
+            // Task was canceled, do nothing
+            Console.WriteLine("Logger: TaskCanceledException caught - search was canceled");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Logger: Search error: {ex.Message}");
+            Console.WriteLine($"Logger: Exception type: {ex.GetType().Name}");
+            Console.WriteLine($"Logger: Stack trace: {ex.StackTrace}");
+        }
+        finally
+        {
+            if (!token.IsCancellationRequested)
+            {
+                Console.WriteLine("Logger: No cancellation requested in finally block");
+                isSearching = false;
+                StateHasChanged();
+                Console.WriteLine("Logger: Set isSearching to false and called StateHasChanged");
+            }
+            else
+            {
+                Console.WriteLine("Logger: Cancellation was requested in finally block, skipping UI update");
+            }
+        }
+
+        Console.WriteLine("Logger: SearchTools method completed");
+    }
+
+    // Navigate to a search result
+    private async Task NavigateToResult(SearchResultDto result)
+    {
+        await CloseSearchBar();
+        NavigationManager.NavigateTo(result.Url);
+    }
+
+    // Handle keyboard navigation
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        Console.WriteLine($"Key pressed: {e.Key}");
+        switch (e.Key)
+        {
+            case "Escape":
+                await CloseSearchBar();
+                break;
+            case "ArrowDown":
+                if (searchResults.Any())
+                {
+                    selectedIndex = (selectedIndex + 1) % searchResults.Count;
+                    await ScrollToSelectedItem();
+                }
+                break;
+            case "ArrowUp":
+                if (searchResults.Any())
+                {
+                    selectedIndex = (selectedIndex - 1 + searchResults.Count) % searchResults.Count;
+                    await ScrollToSelectedItem();
+                }
+                break;
+            case "Enter":
+                if (selectedIndex >= 0 && selectedIndex < searchResults.Count)
+                {
+                    await NavigateToResult(searchResults[selectedIndex]);
+                }
+                break;
+        }
+    }
+
+    // Scroll to keep selected item in view
+    private async Task ScrollToSelectedItem()
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("searchFunctions.scrollToSelectedItem", selectedIndex);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error scrolling: {ex.Message}");
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Set up keyboard shortcut (Ctrl+K or Cmd+K)
+            await JSRuntime.InvokeVoidAsync("eval", @"
+window.addEventListener('keydown', function(e) {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        DotNet.invokeMethod('it_tools', 'ToggleSearch');
+    }
+});
+");
+        }
+    }
+
+    [JSInvokable("ToggleSearch")]
+    public static Task InvokeToggleSearch()
+    {
+        if (_instance != null)
+        {
+            return _instance.ToggleSearchBar();
+        }
+        return Task.CompletedTask;
+    }
+
+    public void Dispose()
+    {
+        if (_instance == this)
+        {
+            _instance = null;
+        }
+
+        _cancellationTokenSource?.Cancel();
+    }
+}
