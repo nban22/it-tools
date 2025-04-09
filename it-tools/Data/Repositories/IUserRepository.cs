@@ -9,4 +9,6 @@ interface IUserRepository
 
     Task RemoveFavoriteTool(string userId, string toolId);
     Task<List<ToolDto>> GetFavoriteTools(string userId);
+
+    Task<UserDto?> GetUserById(string userId);
 }

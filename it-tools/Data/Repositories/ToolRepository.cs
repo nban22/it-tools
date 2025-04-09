@@ -145,7 +145,7 @@ public class ToolRepository(IDbContextFactory<ApplicationDbContext> contextFacto
         {
             using var dbContext = _contextFactory.CreateDbContext();
             var favoriteToolIds = await dbContext.FavouriteTools
-                .Where(f => f.UserId == userId)
+                .Where(f => f.UserId == userId && f.Tool != null && f.Tool.IsEnabled == true) // Only include enabled tools
                 .Select(f => f.ToolId)
                 .ToListAsync();
 

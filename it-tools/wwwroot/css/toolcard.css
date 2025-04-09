@@ -1,0 +1,120 @@
+/* ToolCard animations and effects */
+
+/* Tool card hover animation */
+.tool-card {
+    transition: all 0.2s ease-in-out;
+    transform: translateY(0);
+}
+
+.tool-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+/* Premium tool effects */
+.premium-badge {
+    position: relative;
+    overflow: hidden;
+}
+
+.premium-badge::before {
+    content: '';
+    position: absolute;
+    top: -10px;
+    right: -10px;
+    width: 40px;
+    height: 40px;
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.8) 0%, rgba(245, 158, 11, 0) 60%);
+    border-radius: 100% 0 0 0;
+    z-index: 1;
+}
+
+/* Favorite button animation */
+.favorite-btn {
+    transition: transform 0.15s ease-in-out;
+}
+
+.favorite-btn:hover {
+    transform: scale(1.15);
+}
+
+.favorite-btn.active {
+    animation: heartbeat 1.2s ease-in-out;
+}
+
+@keyframes heartbeat {
+    0% { transform: scale(1); }
+    25% { transform: scale(1.2); }
+    50% { transform: scale(1); }
+    75% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+}
+
+/* Premium lock animation */
+.premium-lock {
+    position: relative;
+    overflow: hidden;
+}
+
+.premium-lock::after {
+    content: '🔒';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 24px;
+    opacity: 0;
+    transition: opacity 0.2s ease-in-out;
+}
+
+.premium-lock:hover::after {
+    opacity: 0.9;
+}
+
+/* Modal animations */
+.modal-overlay {
+    animation: fadeIn 0.2s ease-out;
+}
+
+.modal-content {
+    animation: slideUp 0.3s ease-out;
+    transform-origin: bottom;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideUp {
+    from { 
+        transform: translateY(50px);
+        opacity: 0;
+    }
+    to { 
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+/* Tool icon pulse effect on hover */
+.tool-icon {
+    transition: all 0.2s ease;
+}
+
+.tool-card:hover .tool-icon {
+    transform: scale(1.1);
+}
+
+/* Premium gradient shimmer effect */
+.premium-gradient {
+    background: linear-gradient(-45deg, #f59e0b, #fcd34d, #f59e0b);
+    background-size: 200% 200%;
+    animation: gradientFlow 3s ease infinite;
+}
+
+@keyframes gradientFlow {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}

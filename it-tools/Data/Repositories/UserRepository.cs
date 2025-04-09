@@ -77,4 +77,41 @@ public class UserRepository(IDbContextFactory<ApplicationDbContext> contextFacto
             throw;
         }
     }
+
+    //Task<UserDto?> GetUserById(string userId);
+    public async Task<UserDto?> GetUserById(string userId) {
+        try
+        {
+            using var context = _contextFactory.CreateDbContext();
+            var user = await context.Users
+                .Include(u => u.FavouriteTools!)
+                .ThenInclude(ft => ft.Tool)
+                .FirstOrDefaultAsync(u => u.Id == userId);
+
+            if (user == null) return null;
+
+            var userDto = new UserDto
+            {
+                Id = user.Id,
+                Username = user.Username,
+                Email = user.Email,
+                IsPremium = user.IsPremium,
+                CreatedAt = user.CreatedAt,
+                PremiumRequest = user.PremiumRequest,
+                FavoriteTools = user.FavouriteTools?.Select(ft => new ToolDto
+                {
+                    Id = ft.Tool != null ? ft.Tool.Id : string.Empty,
+                    Name = ft.Tool != null ? ft.Tool.Name : string.Empty,
+                    Description = ft.Tool != null ? ft.Tool.Description : string.Empty,
+                }).ToList() ?? new List<ToolDto>()
+            };
+
+            return userDto;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to retrieve user {UserId}", userId);
+            throw;
+        }
+    }
 }
