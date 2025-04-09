@@ -2,29 +2,159 @@
 @inject ToolAssemblyService ToolAssemblyService
 @inject IDbContextFactory<ApplicationDbContext> DbContextFactory
 @inject ILogger<ToolsPage> Logger
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthStateProvider
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
 
 @using Microsoft.EntityFrameworkCore
 @using it_tools.Data
+@using it_tools.Data.Repositories
 @using System.Reflection
 
-@if (toolComponentType != null)
+@if (isLoading)
+{
+    <div class="flex justify-center items-center h-64">
+        <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-teal-500 border-opacity-50"></div>
+    </div>
+}
+else if (toolComponentType != null && isToolAvailable)
 {
     <DynamicComponent Type="toolComponentType" />
 }
 else
 {
-    <div class="p-4 bg-white rounded-lg shadow-md">
-        <div class="flex items-center text-red-500 mb-4">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-            </svg>
-            <h3 class="text-lg font-medium">Tool không khả dụng</h3>
-        </div>
-        <p class="text-gray-600">Có lỗi xảy ra khi tải tool. Vui lòng thử lại sau hoặc liên hệ admin.</p>
-        @if (loadError != null)
+    <div class="max-w-3xl mx-auto">
+        @if (!isToolEnabled)
         {
-            <div class="mt-4 p-3 bg-red-50 text-red-700 rounded-md text-sm">
-                @loadError
+            <div class="bg-white rounded-lg shadow-md overflow-hidden">
+                <div class="p-6 md:p-8">
+                    <div class="flex items-center justify-center mb-6">
+                        <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center text-gray-400">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </div>
+                    </div>
+                    <h2 class="text-xl md:text-2xl font-bold text-center text-gray-800 mb-2">Tool Currently Unavailable</h2>
+                    <p class="text-center text-gray-600 mb-6">This tool is currently disabled for maintenance or updates. Please check back later.</p>
+                    <div class="flex justify-center">
+                        <button @onclick="GoBack" class="px-4 py-2 bg-teal-600 text-white rounded-md hover:bg-teal-700 transition-colors">
+                            Return to Tools
+                        </button>
+                    </div>
+                </div>
+            </div>
+        }
+        else if (isPremiumTool && !isUserPremium)
+        {
+            <div class="bg-white rounded-lg shadow-md overflow-hidden">
+                <div class="bg-gradient-to-r from-amber-500 to-amber-600 p-4">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-xl font-bold text-white">Premium Feature</h3>
+                        <span class="bg-amber-100 text-amber-800 text-xs font-semibold px-2.5 py-0.5 rounded-full">PRO</span>
+                    </div>
+                </div>
+                <div class="p-6 md:p-8">
+                    <div class="flex items-center justify-center mb-6">
+                        <div class="w-20 h-20 bg-amber-100 rounded-full flex items-center justify-center text-amber-600">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                            </svg>
+                        </div>
+                    </div>
+                    <h2 class="text-xl md:text-2xl font-bold text-center text-gray-800 mb-2">Upgrade to Access This Tool</h2>
+                    <p class="text-center text-gray-600 mb-6">This premium tool is available exclusively to our premium subscribers.</p>
+                    
+                    <div class="bg-amber-50 rounded-lg p-4 mb-6">
+                        <h4 class="font-semibold text-amber-800 mb-2">Premium Benefits:</h4>
+                        <ul class="space-y-2">
+                            <li class="flex items-start">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-amber-600 mr-2 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                </svg>
+                                <span>Access to all premium tools</span>
+                            </li>
+                            <li class="flex items-start">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-amber-600 mr-2 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                </svg>
+                                <span>Priority support and advanced features</span>
+                            </li>
+                            <li class="flex items-start">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-amber-600 mr-2 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                </svg>
+                                <span>Early access to new tools and updates</span>
+                            </li>
+                        </ul>
+                    </div>
+                    
+                    <div class="flex flex-col sm:flex-row justify-center space-y-3 sm:space-y-0 sm:space-x-3">
+                        <button @onclick="GoBack" class="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors">
+                            Return to Tools
+                        </button>
+                        <button @onclick="NavigateToUpgrade" class="px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-md hover:from-amber-600 hover:to-amber-700 transition-colors">
+                            Upgrade to Premium
+                        </button>
+                    </div>
+                </div>
+            </div>
+        }
+        else if (!isUserLoggedIn && isPremiumTool)
+        {
+            <div class="bg-white rounded-lg shadow-md overflow-hidden">
+                <div class="p-6 md:p-8">
+                    <div class="flex items-center justify-center mb-6">
+                        <div class="w-16 h-16 bg-teal-100 rounded-full flex items-center justify-center text-teal-600">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+                            </svg>
+                        </div>
+                    </div>
+                    <h2 class="text-xl md:text-2xl font-bold text-center text-gray-800 mb-2">Sign In Required</h2>
+                    <p class="text-center text-gray-600 mb-6">Please sign in to your account to access this premium tool.</p>
+                    <div class="flex flex-col sm:flex-row justify-center space-y-3 sm:space-y-0 sm:space-x-3">
+                        <button @onclick="GoBack" class="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors">
+                            Return to Tools
+                        </button>
+                        <button @onclick="NavigateToLogin" class="px-4 py-2 bg-teal-600 text-white rounded-md hover:bg-teal-700 transition-colors">
+                            Sign In
+                        </button>
+                    </div>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="bg-white rounded-lg shadow-md overflow-hidden">
+                <div class="border-l-4 border-red-500 p-6 md:p-8">
+                    <div class="flex items-start">
+                        <div class="flex-shrink-0">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                            </svg>
+                        </div>
+                        <div class="ml-3">
+                            <h3 class="text-lg font-medium text-red-800">Tool Unavailable</h3>
+                            <div class="mt-2 text-sm text-red-700">
+                                <p>There was an error loading this tool. Please try again later or contact support if the issue persists.</p>
+                            </div>
+                            @if (loadError != null && !string.IsNullOrWhiteSpace(loadError))
+                            {
+                                <div class="mt-4 p-3 bg-red-50 text-red-700 rounded-md text-sm">
+                                    <div class="font-medium">Error details:</div>
+                                    <p>@loadError</p>
+                                </div>
+                            }
+                            <div class="mt-4">
+                                <button @onclick="GoBack" class="px-4 py-2 bg-red-100 text-red-800 rounded-md hover:bg-red-200 transition-colors">
+                                    Return to Tools
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         }
     </div>
@@ -36,32 +166,72 @@ else
 
     private Type? toolComponentType;
     private string? loadError;
+    private bool isLoading = true;
+    private bool isToolEnabled = false;
+    private bool isPremiumTool = false;
+    private bool isUserPremium = false;
+    private bool isUserLoggedIn = false;
+    private bool isToolAvailable => isToolEnabled && (!isPremiumTool || isUserPremium || !isUserLoggedIn);
 
     protected override async Task OnInitializedAsync()
     {
         try {
+            // Check user login and premium status
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+            isUserLoggedIn = user.Identity?.IsAuthenticated ?? false;
+            
+            if (isUserLoggedIn)
+            {
+                // In a real app, you would check if the user has a premium subscription
+                // This is a simplified example - replace with your actual logic
+                isUserPremium = user.HasClaim(c => c.Type == "IsPremium" && c.Value == "true");
+                
+                // Alternative approach using user repository:
+                // var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                // if (!string.IsNullOrEmpty(userId))
+                // {
+                //     var userRepository = ScopedServices.GetRequiredService<IUserRepository>();
+                //     var userData = await userRepository.GetUserById(userId);
+                //     isUserPremium = userData?.IsPremium ?? false;
+                // }
+            }
+
             using var context = await DbContextFactory.CreateDbContextAsync();
             var tool = await context.Tools.FirstOrDefaultAsync(t => t.Slug == Slug);
             
             if (tool == null)
             {
                 loadError = $"Tool with slug '{Slug}' does not exist.";
+                isLoading = false;
+                return;
+            }
+            
+            // Check if the tool is enabled and if it's premium
+            isToolEnabled = tool.IsEnabled;
+            isPremiumTool = tool.IsPremium;
+            
+            // If the tool is disabled or it's premium and user isn't premium, don't load the component
+            if (!isToolEnabled || (isPremiumTool && !isUserPremium && isUserLoggedIn))
+            {
+                isLoading = false;
                 return;
             }
             
             Assembly assembly;
             if (!string.IsNullOrEmpty(tool.DllPath))
             {
-                // Nếu lưu trong file system
+                // Load from file system
                 assembly = ToolAssemblyService.LoadToolAssembly(tool.DllPath);
             }
             else
             {
                 loadError = "The tool is not properly configured.";
+                isLoading = false;
                 return;
             }
             
-            // Find the component type based on the slug - no need for TypeName or Namespace
+            // Find the component type based on the slug
             toolComponentType = ToolAssemblyService.FindToolComponentType(assembly, Slug ?? string.Empty);
             
             if (toolComponentType == null)
@@ -74,5 +244,22 @@ else
             loadError = $"Error: {ex.Message}";
             Logger.LogError(ex, $"Error while loading tool '{Slug}'");
         }
+        
+        isLoading = false;
+    }
+    
+    private void GoBack()
+    {
+        NavigationManager.NavigateTo("/");
+    }
+    
+    private void NavigateToLogin()
+    {
+        NavigationManager.NavigateTo("/login");
+    }
+    
+    private void NavigateToUpgrade()
+    {
+        NavigationManager.NavigateTo("/upgrade");
     }
 }

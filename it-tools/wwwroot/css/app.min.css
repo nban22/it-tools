@@ -745,6 +745,10 @@ video {
   height: 5rem;
 }
 
+.h-3 {
+  height: 0.75rem;
+}
+
 .h-3\.5 {
   height: 0.875rem;
 }
@@ -759,6 +763,10 @@ video {
 
 .h-6 {
   height: 1.5rem;
+}
+
+.h-64 {
+  height: 16rem;
 }
 
 .h-8 {
@@ -791,6 +799,10 @@ video {
 
 .w-20 {
   width: 5rem;
+}
+
+.w-3 {
+  width: 0.75rem;
 }
 
 .w-3\.5 {
@@ -1035,12 +1047,20 @@ video {
   border-bottom-width: 1px;
 }
 
+.border-l-4 {
+  border-left-width: 4px;
+}
+
 .border-r {
   border-right-width: 1px;
 }
 
 .border-t {
   border-top-width: 1px;
+}
+
+.border-t-4 {
+  border-top-width: 4px;
 }
 
 .border-amber-200 {
@@ -1073,6 +1093,11 @@ video {
   border-color: rgb(254 202 202 / var(--tw-border-opacity, 1));
 }
 
+.border-red-500 {
+  --tw-border-opacity: 1;
+  border-color: rgb(239 68 68 / var(--tw-border-opacity, 1));
+}
+
 .border-teal-500 {
   --tw-border-opacity: 1;
   border-color: rgb(20 184 166 / var(--tw-border-opacity, 1));
@@ -1084,6 +1109,10 @@ video {
 
 .border-t-transparent {
   border-top-color: transparent;
+}
+
+.border-opacity-50 {
+  --tw-border-opacity: 0.5;
 }
 
 .bg-amber-100 {
@@ -1159,6 +1188,11 @@ video {
 .bg-purple-100 {
   --tw-bg-opacity: 1;
   background-color: rgb(243 232 255 / var(--tw-bg-opacity, 1));
+}
+
+.bg-red-100 {
+  --tw-bg-opacity: 1;
+  background-color: rgb(254 226 226 / var(--tw-bg-opacity, 1));
 }
 
 .bg-red-50 {
@@ -1708,6 +1742,11 @@ video {
   background-color: rgb(67 56 202 / var(--tw-bg-opacity, 1));
 }
 
+.hover\:bg-red-200:hover {
+  --tw-bg-opacity: 1;
+  background-color: rgb(254 202 202 / var(--tw-bg-opacity, 1));
+}
+
 .hover\:bg-red-600:hover {
   --tw-bg-opacity: 1;
   background-color: rgb(220 38 38 / var(--tw-bg-opacity, 1));
@@ -1828,6 +1867,22 @@ video {
   .sm\:grid-cols-2 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .sm\:flex-row {
+    flex-direction: row;
+  }
+
+  .sm\:space-x-3 > :not([hidden]) ~ :not([hidden]) {
+    --tw-space-x-reverse: 0;
+    margin-right: calc(0.75rem * var(--tw-space-x-reverse));
+    margin-left: calc(0.75rem * calc(1 - var(--tw-space-x-reverse)));
+  }
+
+  .sm\:space-y-0 > :not([hidden]) ~ :not([hidden]) {
+    --tw-space-y-reverse: 0;
+    margin-top: calc(0px * calc(1 - var(--tw-space-y-reverse)));
+    margin-bottom: calc(0px * var(--tw-space-y-reverse));
+  }
 }
 
 @media (min-width: 768px) {
@@ -1845,6 +1900,15 @@ video {
 
   .md\:grid-cols-3 {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .md\:p-8 {
+    padding: 2rem;
+  }
+
+  .md\:text-2xl {
+    font-size: 1.5rem;
+    line-height: 2rem;
   }
 }
 
