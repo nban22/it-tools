@@ -8,7 +8,6 @@ public class ToolService : IToolService
 {
     private readonly IToolRepository _toolRepository;
     private readonly ILogger<ToolService> _logger;
-
     private readonly ToolAssemblyService _toolAssemblyService;
     private readonly IWebHostEnvironment _environment;
 
@@ -108,7 +107,7 @@ public class ToolService : IToolService
             throw;
         }
     }
-   
+
     public async Task<bool> DeleteToolAsync(string toolId)
     {
         try
@@ -116,16 +115,35 @@ public class ToolService : IToolService
             var tool = await _toolRepository.GetToolByIdAsync(toolId);
             if (tool == null)
             {
+                _logger.LogWarning("Tool with ID {ToolId} not found.", toolId);
                 return false;
             }
 
+            // Unload assembly trước khi xóa
+            if (!string.IsNullOrEmpty(tool.DllPath))
+            {
+                _toolAssemblyService.UnloadToolAssembly(tool.DllPath);
+            }
+
+            // Xóa thư mục chứa file DLL
             string toolPath = Path.GetDirectoryName(tool.DllPath) ?? string.Empty;
             if (Directory.Exists(toolPath))
             {
                 Directory.Delete(toolPath, true);
+                _logger.LogInformation("Deleted tool folder: {ToolPath}", toolPath);
             }
 
-            return await _toolRepository.DeleteToolAsync(toolId);
+            // Xóa bản ghi trong cơ sở dữ liệu
+            var result = await _toolRepository.DeleteToolAsync(toolId);
+            if (result)
+            {
+                _logger.LogInformation("Successfully deleted tool with ID {ToolId}", toolId);
+            }
+            else
+            {
+                _logger.LogWarning("Failed to delete tool with ID {ToolId} from database", toolId);
+            }
+            return result;
         }
         catch (Exception ex)
         {

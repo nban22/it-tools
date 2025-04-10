@@ -3,16 +3,31 @@
 @using it_tools.Components.Admin.Layout
 @inject NavigationManager NavigationManager
 
-<div class="flex h-screen w-screen bg-gray-100">
-    <div class="bg-gray-900 text-white w-64 min-h-screen p-4 shadow-lg">
+<div class="flex h-screen w-screen bg-gray-50">
+    <!-- Sidebar (không fixed, cuộn cùng trang) -->
+    <div class="bg-gradient-to-b from-gray-900 to-gray-800 text-white w-64 min-h-screen p-4 shadow-lg">
         <NavMenuAdmin />
     </div>
-    <div class="flex-1 flex min-h-0 flex-col">
-        <header class="bg-white shadow-md p-4">
-            <h1 class="text-2xl font-semibold text-gray-800">Admin Panel</h1>
+
+    <!-- Main content -->
+    <div class="flex-1 flex flex-col">
+        <header class="bg-white shadow-md p-4 flex items-center justify-between">
+            <h1 class="text-2xl font-semibold text-gray-800">Admin Management</h1>
+            <div class="flex items-center space-x-4">
+                <button @onclick="NavigateToHome" class="text-indigo-600 hover:text-indigo-800 font-medium transition-colors duration-200">
+                    View Home Page
+                </button>
+            </div>
         </header>
-        <main class="flex-1 p-6 overflow-auto">
+        <main class="flex-1 p-6 overflow-auto bg-gray-50">
             @Body
         </main>
     </div>
 </div>
+
+@code {
+    private void NavigateToHome()
+    {
+        NavigationManager.NavigateTo("/");
+    }
+}
