@@ -12,8 +12,8 @@ using it_tools.Data;
 namespace ittools.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20250409055110_CreateDB")]
-    partial class CreateDB
+    [Migration("20250410005403_InitialDB")]
+    partial class InitialDB
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -69,9 +69,6 @@ namespace ittools.Migrations
             modelBuilder.Entity("it_tools.Data.Models.Tool", b =>
                 {
                     b.Property<string>("Id")
-                        .HasColumnType("text");
-
-                    b.Property<string>("ConfigPath")
                         .HasColumnType("text");
 
                     b.Property<string>("Description")

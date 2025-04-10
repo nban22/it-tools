@@ -1,0 +1,125 @@
+@page "/admin/tools/detail/{toolId}"
+@layout it_tools.Components.Admin.Layout.AdminLayout
+@using Microsoft.EntityFrameworkCore
+@inject IDbContextFactory<it_tools.Data.ApplicationDbContext> DbContextFactory
+@inject NavigationManager NavigationManager
+@inject it_tools.Data.Repositories.IToolRepository ToolRepository
+@using it_tools.Data.Models
+
+<div class="max-w-4xl mx-auto p-6">
+    @if (isLoading)
+    {
+        <div class="flex justify-center items-center h-64">
+            <div class="animate-spin rounded-full h-12 w-12 border-t-4 border-blue-500"></div>
+        </div>
+    }
+    else if (tool == null)
+    {
+        <div class="bg-red-50 border-l-4 border-red-500 rounded-lg p-6 text-center shadow-md transform transition-all duration-300 hover:shadow-lg">
+            <h3 class="text-xl font-semibold text-red-800">Tool Not Found</h3>
+            <p class="text-sm text-red-600 mt-2">The tool with ID @toolId does not exist.</p>
+            <button @onclick="GoBack" class="mt-4 px-5 py-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors duration-200 shadow-md">
+                Back to List
+            </button>
+        </div>
+    }
+    else
+    {
+        <div class="bg-white p-8 rounded-2xl shadow-xl border border-gray-100 transform transition-all duration-300 hover:shadow-2xl">
+            <div class="flex items-center justify-between mb-8">
+                <h3 class="text-3xl font-bold text-gray-800 tracking-tight">@tool.Name</h3>
+                <button @onclick="GoBack" class="flex items-center text-gray-600 hover:text-blue-600 transition-colors duration-200">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                    </svg>
+                    <span class="font-medium">Back</span>
+                </button>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div class="space-y-6">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-500 uppercase tracking-wide">Tool Name</label>
+                        <p class="text-xl text-gray-900 font-medium mt-1">@tool.Name</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-500 uppercase tracking-wide">Description</label>
+                        <p class="text-gray-700 mt-1 leading-relaxed">@(string.IsNullOrEmpty(tool.Description) ? "No description available" : tool.Description)</p>
+                    </div>
+                </div>
+                <div class="space-y-6">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-500 uppercase tracking-wide">Group</label>
+                        <p class="text-gray-900 mt-1">@(tool.Group?.Name ?? "No group assigned")</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-500 uppercase tracking-wide">Status</label>
+                        <div class="flex space-x-3 mt-2">
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium @(tool.IsEnabled ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800") shadow-sm">
+                                @(tool.IsEnabled ? "Active" : "Inactive")
+                            </span>
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium @(tool.IsPremium ? "bg-blue-100 text-blue-800" : "bg-gray-100 text-gray-800") shadow-sm">
+                                @(tool.IsPremium ? "Premium" : "Free")
+                            </span>
+                        </div>
+                        <div class="flex space-x-4 mt-4">
+                            <button @onclick="() => ToggleActivation()" class="@(tool.IsEnabled ? "bg-red-600" : "bg-green-600") text-white px-5 py-2 rounded-full hover:opacity-85 transition-all duration-200 shadow-md">
+                                @(tool.IsEnabled ? "Deactivate" : "Activate")
+                            </button>
+                            <button @onclick="() => TogglePremiumStatus()" class="@(tool.IsPremium ? "bg-yellow-600" : "bg-blue-600") text-white px-5 py-2 rounded-full hover:opacity-85 transition-all duration-200 shadow-md">
+                                @(tool.IsPremium ? "Downgrade" : "Upgrade")
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public string toolId { get; set; } = string.Empty;
+
+    private bool isLoading = true;
+    private Tool? tool;
+    private string? returnUrl;
+
+    protected override void OnInitialized()
+    {
+        var uri = new Uri(NavigationManager.Uri);
+        var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
+        returnUrl = query["returnUrl"] ?? "/admin/tools";
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        using var dbContext = await DbContextFactory.CreateDbContextAsync();
+        tool = await dbContext.Tools
+            .Include(t => t.Group)
+            .FirstOrDefaultAsync(t => t.Id == toolId);
+
+        isLoading = false;
+    }
+
+    private async Task ToggleActivation()
+    {
+        if (tool == null) return;
+
+        await ToolRepository.UpdateToolEnabledStatusAsync(tool.Id, !tool.IsEnabled);
+        tool.IsEnabled = !tool.IsEnabled;
+    }
+
+    private async Task TogglePremiumStatus()
+    {
+        if (tool == null) return;
+
+        await ToolRepository.UpdateToolPremiumStatusAsync(tool.Id, !tool.IsPremium);
+        tool.IsPremium = !tool.IsPremium;
+    }
+
+    private void GoBack()
+    {
+        NavigationManager.NavigateTo(returnUrl ?? "/admin/tools");
+    }
+}

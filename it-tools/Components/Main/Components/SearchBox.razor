@@ -290,7 +290,7 @@
     private async Task NavigateToResult(SearchResultDto result)
     {
         await CloseSearchBar();
-        NavigationManager.NavigateTo(result.Url);
+        NavigationManager.NavigateTo(result.Url, true);
     }
 
     // Handle keyboard navigation

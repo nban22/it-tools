@@ -428,7 +428,7 @@
     private void ReturnToPreviousPage()
     {
         ClosePaymentModal();
-        NavigationManager.NavigateTo(previousUrl);
+        NavigationManager.NavigateTo(previousUrl, true);
     }
 
     [Inject]

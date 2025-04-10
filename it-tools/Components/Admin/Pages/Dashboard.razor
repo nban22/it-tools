@@ -2,60 +2,105 @@
 @using Microsoft.EntityFrameworkCore
 @layout it_tools.Components.Admin.Layout.AdminLayout
 @inject IDbContextFactory<it_tools.Data.ApplicationDbContext> DbContextFactory
+@inject it_tools.Data.Services.IToolService ToolService
 @using it_tools.Data.Models
 
-<h3 class="text-xl font-semibold text-gray-800 mb-6">Dashboard</h3>
+<div class="min-h-screen bg-gray-50 p-6">
+    <h3 class="text-3xl font-bold text-gray-800 mb-10 tracking-tight">Dashboard</h3>
 
-@if (isLoading)
-{
-    <p>Đang tải...</p>
-}
-else
-{
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-        <!-- Card: Tổng số công cụ -->
-        <div class="bg-white p-6 rounded-lg shadow-md">
-            <h4 class="text-lg font-medium text-gray-700 mb-2">Tổng số công cụ</h4>
-            <p class="text-3xl font-bold text-gray-900">@totalTools</p>
+    @if (isLoading)
+    {
+        <div class="flex justify-center items-center h-64">
+            <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-blue-500"></div>
+        </div>
+    }
+    else
+    {
+        <!-- Card số liệu -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-10">
+            <!-- Total Tools -->
+            <div class="bg-gradient-to-br from-blue-500 to-blue-700 p-6 rounded-2xl shadow-xl transform hover:scale-105 transition-all duration-300">
+                <div class="flex items-center space-x-4">
+                    <div class="p-3 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
+                        <!-- Ký tự Unicode ∑, căn giữa -->
+                        <span class="text-3xl text-white">∑</span>
+                    </div>
+                    <div>
+                        <h4 class="text-lg font-semibold text-white">Total Tools</h4>
+                        <p class="text-4xl font-bold text-white mt-1">@totalTools</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Active Tools -->
+            <div class="bg-gradient-to-br from-green-500 to-green-700 p-6 rounded-2xl shadow-xl transform hover:scale-105 transition-all duration-300">
+                <div class="flex items-center space-x-4">
+                    <div class="p-3 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
+                        <svg class="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                        </svg>
+                    </div>
+                    <div>
+                        <h4 class="text-lg font-semibold text-white">Active Tools</h4>
+                        <p class="text-4xl font-bold text-white mt-1">@activeTools</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Premium Tools -->
+            <div class="bg-gradient-to-br from-yellow-400 to-yellow-600 p-6 rounded-2xl shadow-xl transform hover:scale-105 transition-all duration-300">
+                <div class="flex items-center space-x-4">
+                    <div class="p-3 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
+                        <!-- Icon ngôi sao trắng -->
+                        <svg class="h-8 w-8 text-white" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+                        </svg>
+                    </div>
+                    <div>
+                        <h4 class="text-lg font-semibold text-white">Premium Tools</h4>
+                        <p class="text-4xl font-bold text-white mt-1">@premiumTools</p>
+                    </div>
+                </div>
+            </div>
         </div>
 
-        <!-- Card: Công cụ đang hoạt động -->
-        <div class="bg-white p-6 rounded-lg shadow-md">
-            <h4 class="text-lg font-medium text-gray-700 mb-2">Công cụ đang hoạt động</h4>
-            <p class="text-3xl font-bold text-green-600">@activeTools</p>
+        <!-- Recent Tools -->
+        <div class="bg-white p-8 rounded-2xl shadow-xl">
+            <h4 class="text-xl font-semibold text-gray-800 mb-6">Recent Tools</h4>
+            @if (recentTools?.Any() == true)
+            {
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    @foreach (var tool in recentTools)
+                    {
+                        <a href="@($"/admin/tools/detail/{tool.Id}")" class="block p-5 bg-gray-50 rounded-xl transition-all duration-300 hover:bg-gray-100 hover:shadow-2xl hover:-translate-y-2">
+                            <div class="flex items-center space-x-4">
+                                <div class="flex-shrink-0">
+                                    <span class="inline-flex items-center justify-center h-12 w-12 rounded-full bg-blue-100 text-blue-600">
+                                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                        </svg>
+                                    </span>
+                                </div>
+                                <div>
+                                    <span class="text-lg font-medium text-gray-900">@tool.Name</span>
+                                    <div class="flex items-center space-x-2 mt-1">
+                                        <span class="text-sm text-gray-500">@(tool.IsPremium ? "Premium" : "Non-Premium")</span>
+                                        <span class="text-sm text-gray-500">|</span>
+                                        <span class="text-sm @(tool.IsEnabled ? "text-green-600" : "text-red-600")">@(tool.IsEnabled ? "Active" : "Inactive")</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </a>
+                    }
+                </div>
+            }
+            else
+            {
+                <p class="text-gray-500 text-center py-4">No tools available.</p>
+            }
         </div>
-
-        <!-- Card: Công cụ Premium -->
-        <div class="bg-white p-6 rounded-lg shadow-md">
-            <h4 class="text-lg font-medium text-gray-700 mb-2">Công cụ Premium</h4>
-            <p class="text-3xl font-bold text-blue-600">@premiumTools</p>
-        </div>
-    </div>
-
-    <!-- Danh sách công cụ gần đây -->
-    <div class="bg-white p-6 rounded-lg shadow-md">
-        <h4 class="text-lg font-medium text-gray-700 mb-4">Công cụ gần đây</h4>
-        @if (recentTools?.Any() == true)
-        {
-            <ul class="space-y-4">
-                @foreach (var tool in recentTools)
-                {
-                    <li class="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
-                        <div>
-                            <span class="text-gray-700 font-medium">@tool.Name</span>
-                            <span class="block text-sm text-gray-500">@(tool.IsPremium ? "Premium" : "Không Premium") | @(tool.IsEnabled ? "Hoạt động" : "Vô hiệu")</span>
-                        </div>
-                        <a href="@($"/admin/tools/activate")" class="text-blue-500 hover:underline">Quản lý</a>
-                    </li>
-                }
-            </ul>
-        }
-        else
-        {
-            <p class="text-gray-500">Không có công cụ nào.</p>
-        }
-    </div>
-}
+    }
+</div>
 
 @code {
     private bool isLoading = true;
@@ -71,8 +116,8 @@ else
 
         totalTools = allTools.Count();
         activeTools = allTools.Count(t => t.IsEnabled);
-        premiumTools = allTools.Count(t => t.IsPremium); // Chỉ đếm công cụ Premium
-        recentTools = allTools.OrderByDescending(t => t.Id).Take(5).ToList(); // Lấy 5 công cụ gần đây nhất
+        premiumTools = allTools.Count(t => t.IsPremium);
+        recentTools = allTools.OrderByDescending(t => t.Id).Take(5).ToList();
 
         isLoading = false;
     }
