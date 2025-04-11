@@ -129,8 +129,7 @@ public class ToolService : IToolService
             string toolPath = Path.GetDirectoryName(tool.DllPath) ?? string.Empty;
             if (Directory.Exists(toolPath))
             {
-                Directory.Delete(toolPath, true);
-                _logger.LogInformation("Deleted tool folder: {ToolPath}", toolPath);
+                await TryDeleteDirectoryAsync(toolPath);
             }
 
             // Xóa bản ghi trong cơ sở dữ liệu
@@ -150,5 +149,35 @@ public class ToolService : IToolService
             _logger.LogError(ex, "Error deleting tool with ID {ToolId}", toolId);
             return false;
         }
+    }
+
+    private async Task<bool> TryDeleteDirectoryAsync(string toolPath, int maxRetries = 3, int delayMs = 500)
+    {
+        for (int i = 0; i < maxRetries; i++)
+        {
+            try
+            {
+                if (Directory.Exists(toolPath))
+                {
+                    Directory.Delete(toolPath, true);
+                    _logger.LogInformation("Deleted tool folder: {ToolPath}", toolPath);
+                    return true;
+                }
+                return true; // Thư mục không tồn tại, coi như thành công
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                _logger.LogWarning(ex, "Attempt {Attempt} failed to delete tool folder: {ToolPath}. Retrying...", i + 1, toolPath);
+                if (i == maxRetries - 1)
+                {
+                    // Nếu lần cuối vẫn thất bại, lưu vào danh sách pending deletions
+                    _logger.LogWarning("Failed to delete tool folder after {MaxRetries} attempts. Scheduling for deletion on startup: {ToolPath}", maxRetries, toolPath);
+                    await File.AppendAllTextAsync("pending-deletions.txt", toolPath + Environment.NewLine);
+                    return false;
+                }
+                await Task.Delay(delayMs); // Đợi trước khi thử lại
+            }
+        }
+        return false;
     }
 }
