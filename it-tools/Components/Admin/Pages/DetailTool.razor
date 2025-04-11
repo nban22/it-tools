@@ -1,4 +1,4 @@
-@page "/admin/tools/detail/{toolId}"
+@page "/admin/tools/detail/{slug}"
 @layout it_tools.Components.Admin.Layout.AdminLayout
 @using Microsoft.EntityFrameworkCore
 @inject IDbContextFactory<it_tools.Data.ApplicationDbContext> DbContextFactory
@@ -17,7 +17,7 @@
     {
         <div class="bg-red-50 border-l-4 border-red-500 rounded-lg p-6 text-center shadow-md transform transition-all duration-300 hover:shadow-lg">
             <h3 class="text-xl font-semibold text-red-800">Tool Not Found</h3>
-            <p class="text-sm text-red-600 mt-2">The tool with ID @toolId does not exist.</p>
+            <p class="text-sm text-red-600 mt-2">The tool with slug @slug does not exist.</p>
             <button @onclick="GoBack" class="mt-4 px-5 py-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors duration-200 shadow-md">
                 Back to List
             </button>
@@ -79,7 +79,7 @@
 
 @code {
     [Parameter]
-    public string toolId { get; set; } = string.Empty;
+    public string slug { get; set; } = string.Empty;
 
     private bool isLoading = true;
     private Tool? tool;
@@ -97,7 +97,7 @@
         using var dbContext = await DbContextFactory.CreateDbContextAsync();
         tool = await dbContext.Tools
             .Include(t => t.Group)
-            .FirstOrDefaultAsync(t => t.Id == toolId);
+            .FirstOrDefaultAsync(t => t.Slug == slug);
 
         isLoading = false;
     }
