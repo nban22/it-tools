@@ -32,26 +32,29 @@
                 </div>
             }
         </div>
-        <div class="flex-shrink-0 ml-2 flex flex-col items-end space-y-2">
-            <button class="flex items-center justify-center w-8 h-8 rounded-full hover:bg-gray-100 transition-colors favorite-btn @(Tool?.IsFavorite == true ? "active" : "")" 
-                    @onclick="HandleFavoriteClick" 
-                    @onclick:stopPropagation>
-                <svg class="w-5 h-5 @(Tool?.IsFavorite == true ? "text-red-500" : "text-gray-300")"
-                     fill="currentColor" 
-                     viewBox="0 0 24 24" 
-                     xmlns="http://www.w3.org/2000/svg">
-                    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
-                </svg>
-            </button>
-            @if (Tool?.IsPremium == true && !userIsPremium && isLoggedIn)
-            {
-                <div class="w-8 h-8 flex items-center justify-center rounded-full bg-amber-100 flex-shrink-0">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+        @if (!isAdmin)
+        {
+            <div class="flex-shrink-0 ml-2 flex flex-col items-end space-y-2">
+                <button class="flex items-center justify-center w-8 h-8 rounded-full hover:bg-gray-100 transition-colors favorite-btn @(Tool?.IsFavorite == true ? "active" : "")" 
+                        @onclick="HandleFavoriteClick" 
+                        @onclick:stopPropagation>
+                    <svg class="w-5 h-5 @(Tool?.IsFavorite == true ? "text-red-500" : "text-gray-300")"
+                        fill="currentColor" 
+                        viewBox="0 0 24 24" 
+                        xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
                     </svg>
-                </div>
-            }
-        </div>
+                </button>
+                @if (Tool?.IsPremium == true && !userIsPremium && isLoggedIn)
+                {
+                    <div class="w-8 h-8 flex items-center justify-center rounded-full bg-amber-100 flex-shrink-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                        </svg>
+                    </div>
+                }
+            </div>
+        }
     </div>
 </div>
 
@@ -139,6 +142,8 @@
     private bool isLoggedIn = false;
     private bool userIsPremium = false;
 
+    private bool isAdmin = false; // Placeholder for admin check
+
     protected override async Task OnInitializedAsync()
     {
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
@@ -149,7 +154,7 @@
         if (isLoggedIn)
         {
             currentUserId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            
+            isAdmin = user.IsInRole("Admin"); // Check if the user is an admin
             if (!string.IsNullOrEmpty(currentUserId))
             {
                 try
@@ -182,7 +187,7 @@
                 showLoginModal = true;
                 return;
             }
-            else if (!userIsPremium)
+            else if (!userIsPremium && !isAdmin)
             {
                 showPremiumModal = true;
                 return;
@@ -254,7 +259,7 @@
         
         if (Tool?.IsPremium == true)
         {
-            if (userIsPremium)
+            if (userIsPremium || isAdmin)
             {
                 // Premium tool and user has premium
                 return $"{baseClasses} hover:shadow-md border-amber-200 hover:border-amber-300";

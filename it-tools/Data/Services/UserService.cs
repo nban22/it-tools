@@ -45,13 +45,13 @@ public class UserService(IDbContextFactory<ApplicationDbContext> dbContextFactor
         var user = await dbContext.Users.FirstOrDefaultAsync(u => u.Email == email);
         if (user == null)
         {
-            return AuthenticationResult.Failure("Email hoặc mật khẩu không đúng.");
+            return AuthenticationResult.Failure("Email or password is incorrect.");
         }
 
         bool isPasswordValid = BCrypt.Net.BCrypt.Verify(password, user.PasswordHash);
         if (!isPasswordValid)
         {
-            return AuthenticationResult.Failure("Email hoặc mật khẩu không đúng.");
+            return AuthenticationResult.Failure("Email or password is incorrect.");
         }
 
         return AuthenticationResult.Success();

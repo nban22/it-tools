@@ -44,27 +44,27 @@ public class SearchService(ApplicationDbContext context, IToolRepository toolRep
             })
             .ToListAsync();
 
-        // Search for tool groups that match the query in name or description
-        var groupResults = await _context.ToolGroups
-            .Where(g => g.Name.ToLower().Contains(query) ||
-                       g.Description.ToLower().Contains(query))
-            .Select(g => new SearchResultDto
-            {
-                Id = g.Id,
-                Name = g.Name,
-                Description = g.Description,
-                Type = "ToolGroup",
-                GroupName = g.Name,
-                Icon = "📁",
-                Url = "/" // This will navigate to home, where they can expand the group
-            })
-            .ToListAsync();
+        // // Search for tool groups that match the query in name or description
+        // var groupResults = await _context.ToolGroups
+        //     .Where(g => g.Name.ToLower().Contains(query) ||
+        //                g.Description.ToLower().Contains(query))
+        //     .Select(g => new SearchResultDto
+        //     {
+        //         Id = g.Id,
+        //         Name = g.Name,
+        //         Description = g.Description,
+        //         Type = "ToolGroup",
+        //         GroupName = g.Name,
+        //         Icon = "📁",
+        //         Url = "/" // This will navigate to home, where they can expand the group
+        //     })
+        //     .ToListAsync();
 
-        // Combine and order results by relevance (name matches first, then description)
-        var combinedResults = toolResults.Concat(groupResults).ToList();
+        // // Combine and order results by relevance (name matches first, then description)
+        // var combinedResults = toolResults.Concat(groupResults).ToList();
         
         // Rank results by relevance
-        return combinedResults
+        return toolResults
             .OrderByDescending(r => r.Name.ToLower().Contains(query))
             .ThenByDescending(r => r.Name.ToLower().StartsWith(query))
             .ThenBy(r => r.Type == "Tool" ? 0 : 1) // Show tools before groups

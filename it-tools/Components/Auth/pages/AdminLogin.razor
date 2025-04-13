@@ -1,0 +1,122 @@
+@page "/admin/login"
+@layout it_tools.Components.Auth.Layout.AuthLayout
+
+@inject IAdminService AdminService
+@inject NavigationManager NavigationManager
+@inject ILogger<AdminLogin> Logger
+@inject IHttpContextAccessor HttpContextAccessor
+
+<PageTitle>Admin Login</PageTitle>
+
+<div class="text-center mb-6">
+    <h1 class="text-3xl font-bold text-gray-900">Admin Portal</h1>
+    <p class="text-gray-600">Login to access admin dashboard</p>
+</div>
+
+<EditForm Model="Input" OnValidSubmit="LoginAdmin" FormName="adminLogin">
+    <DataAnnotationsValidator />
+    <div class="mb-4">
+        <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+        <input @bind="Input.Email"
+            class="w-full bg-gray-100 border border-gray-300 rounded-md p-3 text-gray-700" autocomplete="username"
+            aria-required="true" placeholder="Enter admin email" />
+    </div>
+    <ValidationMessage For="() => Input.Email" class="text-red-500 text-sm" />
+    
+    <div class="relative mb-4">
+        <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+        <div class="relative">
+            <input type="@(showPassword ? "text" : "password")" @bind="Input.Password"
+                class="w-full bg-gray-100 border border-gray-300 rounded-md p-3 text-gray-700"
+                autocomplete="current-password" aria-required="true" placeholder="Enter admin password" />
+            <button class="absolute right-3 top-1/2 transform -translate-y-1/2" @onclick="ToggleEye" type="button">
+                @{
+                    if (showPassword)
+                    {
+                        <HeroIcon Name="eye" class="w-5 h-5 text-gray-500" />
+                    }
+                    else
+                    {
+                        <HeroIcon Name="eye-slash-fill" class="w-5 h-5 text-gray-500" />
+                    }
+                }
+            </button>
+        </div>
+    </div>
+    <ValidationMessage For="() => Input.Password" class="text-red-500 text-sm" />
+    
+    <div class="text-left mb-4">
+        <label class="form-label flex items-center space-x-2">
+            <InputCheckbox @bind-Value="Input.RememberMe"
+                class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring focus:ring-blue-500" />
+            <span>Remember me</span>
+        </label>
+    </div>
+    
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="p-3 mb-4 text-sm text-red-700 bg-red-100 rounded-lg">
+            @errorMessage
+        </div>
+    }
+    
+    <button type="submit" class="w-full bg-gray-900 text-white rounded-md p-3 font-medium hover:bg-gray-800 transition-colors mb-4">
+        Login to Admin
+    </button>
+</EditForm>
+
+<div class="text-center mt-4">
+    <a href="/" class="text-sm text-blue-600 hover:underline">Back to main site</a>
+</div>
+
+@code {
+    private string? errorMessage;
+    private bool showPassword = false;
+
+    private void ToggleEye()
+    {
+        showPassword = !showPassword;
+    }
+
+    [SupplyParameterFromForm]
+    private InputModel Input { get; set; } = new();
+
+    [SupplyParameterFromQuery]
+    private string? ReturnUrl { get; set; }
+
+    public async Task LoginAdmin()
+    {
+        var authResult = await AdminService.AuthenticateAdminAsync(Input.Email, Input.Password);
+        if (authResult.Succeeded)
+        {
+            var admin = await AdminService.GetAdminByEmailAsync(Input.Email);
+            if (admin == null)
+            {
+                errorMessage = "Admin not found.";
+                return;
+            }
+
+            // Redirect to admin login handler
+            var redirectUrl = $"/auth/adminloginhandler?email={Uri.EscapeDataString(Input.Email)}&rememberMe={Input.RememberMe}&returnUrl={Uri.EscapeDataString(ReturnUrl ?? "/admin/dashboard")}";
+            NavigationManager.NavigateTo(redirectUrl, forceLoad: true);
+        }
+        else
+        {
+            errorMessage = authResult.ErrorMessage ?? "Invalid login credentials.";
+        }
+    }
+
+    private sealed class InputModel
+    {
+        [Required]
+        [EmailAddress]
+        public string Email { get; set; } = "";
+
+        [Required]
+        [DataType(DataType.Password)]
+        public string Password { get; set; } = "";
+
+        [Display(Name = "Remember me?")]
+        public bool RememberMe { get; set; }
+    }
+}

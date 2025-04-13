@@ -1,7 +1,7 @@
 @page "/login"
 @layout AuthLayout
 
-@using System.ComponentModel.DataAnnotations
+
 @inject IUserService UserService
 @inject NavigationManager NavigationManager
 @inject ILogger<Login> Logger
@@ -52,7 +52,7 @@
     <StatusMessage Message="@errorMessage" />
     <button type="submit" class="w-full bg-black text-white rounded-md p-4 font-bold mb-4">Login</button>
 </EditForm>
-<div class="text-center my-4">
+@* <div class="text-center my-4">
     <span class="text-sm text-gray-500">Or Login with</span>
 </div>
 <div class="flex justify-center gap-4">
@@ -65,7 +65,7 @@
     <button class="w-10 h-10 flex items-center justify-center bg-white border border-gray-300 rounded-md">
         <span class="text-black">A</span>
     </button>
-</div>
+</div> *@
 <div class="text-center mt-4">
     <span class="text-sm text-gray-500">Don't have an account? </span>
     <a href="/signup" class="text-sm text-teal-500 hover:underline">Register Now</a>
@@ -114,7 +114,6 @@
         }
         else if (authResult.IsLockedOut)
         {
-            Logger.LogWarning("User account locked out.");
             errorMessage = "Account is locked out.";
         }
         else

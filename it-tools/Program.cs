@@ -28,10 +28,10 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         options.ExpireTimeSpan = TimeSpan.FromMinutes(60); // Thời gian hết hạn cookie
     });
 
-// builder.Services.AddAuthorization(options =>
-// {
-//     options.AddPolicy("AdminOnly", policy => policy.RequireRole("Admin"));
-// });
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("AdminOnly", policy => policy.RequireRole("Admin"));
+});
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 builder.Services.AddDbContextFactory<ApplicationDbContext>(options =>
@@ -47,12 +47,21 @@ builder.Services.AddScoped<IToolGroupRepository, ToolGroupRepository>();
 builder.Services.AddScoped<ToolAssemblyService>();
 builder.Services.AddScoped<ISearchService, SearchService>();
 
+builder.Services.AddScoped<IAdminService, AdminService>();
+
 // Đăng ký CleanupService
 builder.Services.AddSingleton<CleanupService>();
 
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
 var app = builder.Build();
+
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    var contextFactory = services.GetRequiredService<IDbContextFactory<ApplicationDbContext>>();
+    await DbInitializer.SeedAdminUser(contextFactory);
+}
 
 // Gọi CleanupService để xóa các thư mục "pending deletions" khi ứng dụng khởi động
 app.Services.GetRequiredService<CleanupService>().CleanupPendingDeletions();
