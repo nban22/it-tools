@@ -2,30 +2,19 @@
 @using Microsoft.AspNetCore.Components.Authorization
 @using it_tools.Components.Main.Components
 @inject NavigationManager NavigationManager
-@using it_tools.Data.Services
 @using it_tools.Data.Repositories
 @using System.Security.Claims
 @inject AuthenticationStateProvider AuthStateProvider
-@inject IJSRuntime JSRuntime
 @inject IUserRepository UserRepository
-
-@implements IAsyncDisposable
 
 <PageTitle>IT-Tools</PageTitle>
 
-<!-- Add reference to our JavaScript file -->
-<HeadContent>
-    <script src="js/search.js"></script>
-</HeadContent>
-
 <div class="flex h-screen w-screen bg-gray-100">
-    <!-- Sidebar Container -->
     <div class="@GetSidebarClass() border-r border-gray-200">
         <NavMenu />
     </div>
 
     <main class="flex-1 flex min-h-0 flex-col">
-        <!-- Topbar -->
         <div class="h-16 bg-white shadow-sm flex justify-between items-center px-6">
             <div class="flex items-center space-x-2">
                 <button @onclick="ToggleSidebar" 
@@ -35,7 +24,6 @@
                     </svg>
                 </button>
                 
-                <!-- Home Button -->
                 <button @onclick=@(() => NavigationManager.NavigateTo("/", true))
                         class="p-2 text-gray-600 hover:text-teal-600 rounded-full hover:bg-gray-100 transition-colors duration-150 flex items-center">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -52,7 +40,19 @@
             <AuthorizeView>
                 <Authorized>
                     <div class="flex items-center space-x-3">
-                        @if (!userIsPremium)
+                        @if (context.User?.IsInRole("Admin") ?? false)
+                        {
+                            <button @onclick=@(() => NavigationManager.NavigateTo("/admin/dashboard"))
+                                    class="flex items-center bg-gradient-to-r from-purple-500 to-purple-600 text-white px-3 py-1.5 rounded-md hover:from-purple-600 hover:to-purple-700 transition-colors font-medium text-sm shadow-sm">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                </svg>
+                                <span class="hidden sm:inline">Admin Dashboard</span>
+                                <span class="sm:hidden">Admin</span>
+                            </button>
+                        }
+                        else if (!userIsPremium)
                         {
                             <button @onclick="ShowPaymentModal" class="flex items-center bg-gradient-to-r from-amber-500 to-amber-600 text-white px-3 py-1.5 rounded-md hover:from-amber-600 hover:to-amber-700 transition-colors font-medium text-sm shadow-sm">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -120,200 +120,26 @@
             </AuthorizeView>
         </div>
 
-        <!-- Content Area -->
         <div class="flex-1 overflow-y-auto p-6 bg-gray-50">
             @Body
         </div>
     </main>
 </div>
 
-<!-- Payment Modal -->
 @if (showPaymentModal)
 {
-    <div class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-        <div class="bg-white rounded-lg shadow-xl w-full max-w-md overflow-hidden">
-            @if (paymentProcessing)
-            {
-                <!-- Processing Payment UI -->
-                <div class="p-6 text-center">
-                    <div class="inline-flex items-center justify-center w-16 h-16 bg-amber-100 rounded-full mb-4">
-                        <div class="w-8 h-8 border-4 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
-                    </div>
-                    <h3 class="text-xl font-bold text-gray-800 mb-2">Processing Payment</h3>
-                    <p class="text-gray-600 mb-4">Please wait while we process your payment...</p>
-                    <div class="w-full bg-gray-200 rounded-full h-2.5 mb-2">
-                        <div class="bg-amber-500 h-2.5 rounded-full" style="width: @(100 - (countdownSeconds * 33))%"></div>
-                    </div>
-                    <p class="text-sm text-gray-500">@countdownSeconds seconds remaining</p>
-                </div>
-            }
-            else if (paymentSuccess)
-            {
-                <!-- Payment Success UI -->
-                <div class="p-6 text-center">
-                    <div class="inline-flex items-center justify-center w-16 h-16 bg-green-100 rounded-full mb-4">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                        </svg>
-                    </div>
-                    <h3 class="text-xl font-bold text-gray-800 mb-2">Payment Successful!</h3>
-                    <p class="text-gray-600 mb-6">Your account has been upgraded to Premium.</p>
-                    <div class="bg-green-50 border border-green-100 rounded-lg p-4 mb-6 text-left">
-                        <h4 class="font-medium text-green-800 mb-2">Premium Benefits Activated:</h4>
-                        <ul class="space-y-2">
-                            <li class="flex items-start">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-500 mr-2 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                                </svg>
-                                <span>Access to all premium tools</span>
-                            </li>
-                            <li class="flex items-start">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-500 mr-2 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                                </svg>
-                                <span>Priority support</span>
-                            </li>
-                            <li class="flex items-start">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-500 mr-2 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                                </svg>
-                                <span>Ad-free experience</span>
-                            </li>
-                        </ul>
-                    </div>
-                    <button @onclick="ReturnToPreviousPage" 
-                            class="w-full px-4 py-2 bg-teal-600 text-white rounded-md hover:bg-teal-700 transition-colors">
-                        Return to Previous Page
-                    </button>
-                </div>
-            }
-            else
-            {
-                <!-- Payment Form UI -->
-                <div class="bg-gradient-to-r from-amber-500 to-amber-600 p-4">
-                    <div class="flex items-center justify-between">
-                        <h3 class="text-xl font-bold text-white">Upgrade to Premium</h3>
-                        <button @onclick="ClosePaymentModal" class="text-white hover:text-amber-200 transition-colors">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                        </button>
-                    </div>
-                </div>
-                <div class="p-6">
-                    <div class="bg-amber-50 rounded-lg p-4 mb-6">
-                        <h4 class="font-semibold text-amber-800 mb-2">Premium Plan - $9.99/month</h4>
-                        <ul class="space-y-2">
-                            <li class="flex items-start">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-amber-600 mr-2 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                                </svg>
-                                <span>Access to all premium tools</span>
-                            </li>
-                            <li class="flex items-start">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-amber-600 mr-2 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                                </svg>
-                                <span>Priority support and advanced features</span>
-                            </li>
-                            <li class="flex items-start">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-amber-600 mr-2 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                                </svg>
-                                <span>Ad-free experience</span>
-                            </li>
-                        </ul>
-                    </div>
-                    
-                    <div class="space-y-4 mb-6">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Card Number</label>
-                            <div class="relative">
-                                <input type="text" class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-teal-500 focus:border-teal-500" 
-                                        placeholder="1234 5678 9012 3456" value="4242 4242 4242 4242" readonly />
-                                <div class="absolute inset-y-0 right-0 flex items-center pr-3">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-                                    </svg>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Expiration Date</label>
-                                <input type="text" class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-teal-500 focus:border-teal-500" 
-                                        placeholder="MM/YY" value="12/25" readonly />
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">CVV</label>
-                                <input type="text" class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-teal-500 focus:border-teal-500" 
-                                        placeholder="123" value="123" readonly />
-                            </div>
-                        </div>
-                        
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Cardholder Name</label>
-                            <input type="text" class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-teal-500 focus:border-teal-500" 
-                                    placeholder="John Doe" value="Demo User" readonly />
-                        </div>
-                    </div>
-                    
-                    <div class="text-xs text-gray-500 mb-6">
-                        <p>This is a simulated payment form. In a real application, we would integrate with a payment processor.</p>
-                        <p class="mt-1">For this demo, we're using placeholder data. Click the button below to simulate payment.</p>
-                    </div>
-                    
-                    <button @onclick="ProcessPayment" 
-                            class="w-full px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-md hover:from-amber-600 hover:to-amber-700 transition-colors">
-                        Upgrade Now - $9.99/month
-                    </button>
-                </div>
-            }
-        </div>
-    </div>
+    <it_tools.Components.Main.Shared.UpgradeModal 
+        CurrentUserId="@currentUserId"
+        OnClose="ClosePaymentModal"
+        OnSuccess="ReturnToPreviousPage" />
 }
 
 @code {
     private bool isSidebarOpen = true;
-    private bool isMobile = false;
     private string? currentUserId;
     private bool userIsPremium = false;
-    
-    // Payment modal states
     private bool showPaymentModal = false;
-    private bool paymentProcessing = false;
-    private bool paymentSuccess = false;
-    private int countdownSeconds = 3;
     private string previousUrl = "/";
-    
-    // Check if we're on mobile after the component renders
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender && JS != null)
-        {
-            try
-            {
-                isMobile = await JS.InvokeAsync<bool>("eval", "window.innerWidth < 768");
-                StateHasChanged();
-                
-                // Set up resize listener
-                await JS.InvokeVoidAsync("eval", @"
-                    window.addEventListener('resize', function() {
-                        DotNet.invokeMethod('it_tools', 'UpdateIsMobile', window.innerWidth < 768);
-                    });
-                ");
-                
-                // Store current URL for returning after payment
-                previousUrl = NavigationManager.Uri;
-            }
-            catch
-            {
-                // Fallback to desktop view if there's an error
-                isMobile = false;
-            }
-        }
-    }
     
     protected override async Task OnInitializedAsync()
     {
@@ -345,31 +171,10 @@
             userIsPremium = false;
         }
     }
-    
-    [JSInvokable("UpdateIsMobile")]
-    public static void UpdateMobileState(bool mobile)
-    {
-        if (_instance != null)
-        {
-            _instance.isMobile = mobile;
-            _instance.StateHasChanged();
-        }
-    }
-    
-    // Static reference to the current instance
-    private static MainLayout? _instance;
-    
-    protected override void OnInitialized()
-    {
-        _instance = this;
-        base.OnInitialized();
-    }
 
     private string GetSidebarClass()
     {
-        return isMobile
-            ? $"fixed inset-y-0 left-0 w-72 bg-white shadow-lg transform transition-transform duration-300 ease-in-out z-50 {(isSidebarOpen ? "translate-x-0" : "-translate-x-full")}"
-            : $"bg-white h-screen w-72 {(isSidebarOpen ? "shadow-lg" : "hidden")}";
+        return $"bg-white h-screen w-72 {(isSidebarOpen ? "shadow-lg" : "hidden")}";
     }
 
     private void ToggleSidebar()
@@ -379,50 +184,13 @@
     
     private void ShowPaymentModal()
     {
-        // Store current URL for returning after payment
         previousUrl = NavigationManager.Uri;
         showPaymentModal = true;
-        paymentProcessing = false;
-        paymentSuccess = false;
     }
     
     private void ClosePaymentModal()
     {
         showPaymentModal = false;
-        paymentProcessing = false;
-        paymentSuccess = false;
-    }
-    
-    private async Task ProcessPayment()
-    {
-        paymentProcessing = true;
-        countdownSeconds = 3;
-        
-        // Simulate payment processing with countdown
-        for (int i = 0; i < 3; i++)
-        {
-            await Task.Delay(1000);
-            countdownSeconds--;
-            StateHasChanged();
-        }
-        
-        // Update user to premium status in database
-        if (!string.IsNullOrEmpty(currentUserId))
-        {
-            try
-            {
-                await UserRepository.SetUserPremiumStatus(currentUserId, true);
-                userIsPremium = true;
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error updating premium status: {ex.Message}");
-            }
-        }
-        
-        // Show success
-        paymentProcessing = false;
-        paymentSuccess = true;
     }
     
     private void ReturnToPreviousPage()
@@ -430,24 +198,4 @@
         ClosePaymentModal();
         NavigationManager.NavigateTo(previousUrl, true);
     }
-
-    [Inject]
-    private IJSRuntime? JS { get; set; }
-    
-    public async ValueTask DisposeAsync()
-    {
-        // Clean up any resources when the component is disposed
-        if (JS != null)
-        {
-            try
-            {
-                await JS.InvokeVoidAsync("eval", "window.toggleSearch = undefined;");
-            }
-            catch
-            {
-                // Ignore errors during disposal
-            }
-        }
-    }
 }
-

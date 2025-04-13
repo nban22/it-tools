@@ -1,13 +1,35 @@
 ﻿@using it_tools.Components.Auth.Shared
 @using it_tools.Components.Main.Layout
 @rendermode InteractiveServer
-<Router AppAssembly="typeof(Program).Assembly">
-    <Found Context="routeData">
-        <AuthorizeRouteView RouteData="routeData" DefaultLayout="typeof(MainLayout)">
-            <NotAuthorized>
-                <RedirectToLogin />
-            </NotAuthorized>
-        </AuthorizeRouteView>
-        <FocusOnNavigate RouteData="routeData" Selector="h1" />
-    </Found>
-</Router>
+
+<CascadingAuthenticationState>
+    <Router AppAssembly="typeof(Program).Assembly">
+        <Found Context="routeData">
+            @{
+                var pagePath = routeData.PageType.FullName ?? string.Empty;
+                var isAdminPage = pagePath.Contains(".Admin.") || routeData.PageType.Name.StartsWith("Admin");
+            }
+            
+            @if (isAdminPage)
+            {
+                <AuthorizeRouteView RouteData="routeData" DefaultLayout="typeof(it_tools.Components.Admin.Layout.AdminLayout)">
+                    <NotAuthorized>
+                        <RedirectToLogin />
+                    </NotAuthorized>
+                </AuthorizeRouteView>
+            }
+            else
+            {
+                <RouteView RouteData="routeData" DefaultLayout="typeof(MainLayout)" />
+            }
+            <FocusOnNavigate RouteData="routeData" Selector="h1" />
+        </Found>
+        <NotFound>
+            <PageTitle>Not found</PageTitle>
+            <LayoutView Layout="@typeof(MainLayout)">
+                <p role="alert">Sorry, there's nothing at this address.</p>
+                <a href="/" class="text-blue-600 hover:underline">Return to home</a>
+            </LayoutView>
+        </NotFound>
+    </Router>
+</CascadingAuthenticationState>

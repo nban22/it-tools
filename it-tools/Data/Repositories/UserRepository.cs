@@ -77,8 +77,6 @@ public class UserRepository(IDbContextFactory<ApplicationDbContext> contextFacto
             throw;
         }
     }
-
-    //Task<UserDto?> GetUserById(string userId);
     public async Task<UserDto?> GetUserById(string userId)
     {
         try

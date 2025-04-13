@@ -3,7 +3,6 @@
 @layout AuthLayout
 
 @inject IUserService UserService
-@inject IEmailService EmailService
 @inject ILogger<Signup> Logger
 @inject NavigationManager NavigationManager
 @inject IHttpContextAccessor HttpContextAccessor
@@ -59,22 +58,6 @@
     <!-- Nút Sign up -->
     <button type="submit" class="w-full bg-black text-white rounded-md p-4 font-bold mt-4">Sign up</button>
 </EditForm>
-
-<!-- Phần đăng ký bằng dịch vụ bên ngoài -->
-<div class="text-center my-4">
-    <span class="text-sm text-gray-500">Or Sign up with</span>
-</div>
-<div class="flex justify-center gap-4">
-    <button class="w-10 h-10 flex items-center justify-center bg-white border border-gray-300 rounded-md">
-        <span class="text-blue-600">F</span>
-    </button>
-    <button class="w-10 h-10 flex items-center justify-center bg-white border border-gray-300 rounded-md">
-        <span class="text-red-500">G</span>
-    </button>
-    <button class="w-10 h-10 flex items-center justify-center bg-white border border-gray-300 rounded-md">
-        <span class="text-black">A</span>
-    </button>
-</div>
 
 <!-- Liên kết đến trang đăng nhập -->
 <div class="text-center mt-4">

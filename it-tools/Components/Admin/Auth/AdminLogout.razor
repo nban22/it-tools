@@ -1,0 +1,15 @@
+@page "/admin/logout"
+@inject NavigationManager NavigationManager
+@inject IHttpContextAccessor HttpContextAccessor
+@inject RedirectManager RedirectManager
+@using Microsoft.AspNetCore.Authentication
+@using Microsoft.AspNetCore.Authentication.Cookies
+@using it_tools.Components.Auth
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        await HttpContextAccessor.HttpContext!.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+        RedirectManager.RedirectTo("/admin/login"); // Hoặc trang bạn muốn chuyển hướng sau khi logout
+    }
+}

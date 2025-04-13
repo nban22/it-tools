@@ -22,7 +22,10 @@
     <div class="py-6">
         @if (isAuthenticated)
         {
-            <FavoriteToolsSection Tools="tools" />
+            @if (!isAdmin)
+            {
+                <FavoriteToolsSection Tools="tools" />
+            }    
             <AllToolsSection Tools="tools" />
         }
         else
@@ -34,6 +37,8 @@
     @code {
         private List<ToolDto>? tools;
         private bool isAuthenticated;
+
+        private bool isAdmin = false; // This should be set based on your authentication logic
 
         protected override async Task OnInitializedAsync()
         {
@@ -58,6 +63,7 @@
             if (user.Identity?.IsAuthenticated == true)
             {
                 isAuthenticated = true;
+                isAdmin = user.IsInRole("Admin"); // Check if the user is an admin
                 string userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "unknown";
                 tools = await ToolRepository.GetAllToolsForUserAsync(userId);
             }
