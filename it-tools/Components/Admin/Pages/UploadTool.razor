@@ -154,11 +154,18 @@
             if (uploadedTool == null)
             {
                 SetError("Failed to process the uploaded tool. Please check the file contents and try again.");
-                isUploading = false;
                 return;
             }
 
             showError = false;
+        }
+        catch (InvalidOperationException ex) when (ex.Message.Contains("A tool with slug"))
+        {
+            SetError("A tool with the same slug already exists. Please delete the existing tool or use a different tool.");
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            SetError("Access denied while processing the tool. The server may not have permission to delete files in ToolPlugins, or the file is locked.");
         }
         catch (Exception ex)
         {
@@ -175,6 +182,7 @@
     {
         errorMessage = message;
         showError = true;
+        uploadedTool = null;
     }
 
     private void ResetForm()
@@ -192,6 +200,9 @@
 
     private void NavigateToToolDetail(string? slug)
     {
-        NavigationManager.NavigateTo($"/admin/tools/detail/{slug}");
+        if (!string.IsNullOrEmpty(slug))
+        {
+            NavigationManager.NavigateTo($"/admin/tools/detail/{slug}");
+        }
     }
 }

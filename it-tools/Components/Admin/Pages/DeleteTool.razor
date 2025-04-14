@@ -175,16 +175,56 @@ else
             var result = await ToolService.DeleteToolAsync(_toolToDelete.Id);
             if (result)
             {
-                foreach (var group in allToolGroups)
+                // Kiểm tra xem thư mục đã được xóa chưa
+                string toolPath = string.Empty;
+                if (!string.IsNullOrEmpty(_toolToDelete.DllPath))
                 {
-                    if (group.Tools != null)
+                    toolPath = Path.GetDirectoryName(_toolToDelete.DllPath) ?? string.Empty;
+                    bool folderDeleted = false;
+                    for (int i = 0; i < 30; i++) // Chờ tối đa 90 giây
                     {
-                        group.Tools.RemoveAll(t => t.Id == _toolToDelete.Id);
+                        await Task.Delay(3000); // Chờ 3 giây mỗi lần
+                        if (!Directory.Exists(toolPath))
+                        {
+                            folderDeleted = true;
+                            break;
+                        }
+                        Logger.LogInformation("Folder {ToolPath} still exists, waiting... Attempt {Attempt}/30", toolPath, i + 1);
+                    }
+
+                    if (folderDeleted)
+                    {
+                        foreach (var group in allToolGroups)
+                        {
+                            if (group.Tools != null)
+                            {
+                                group.Tools.RemoveAll(t => t.Id == _toolToDelete.Id);
+                            }
+                        }
+                        _toastSuccess = true;
+                        _toastMessage = $"Công cụ '{_toolToDelete.Name}' đã được xóa thành công!";
+                        Logger.LogInformation("Successfully deleted tool: {ToolName} (ID: {ToolId})", _toolToDelete.Name, _toolToDelete.Id);
+                    }
+                    else
+                    {
+                        _toastSuccess = false;
+                        _toastMessage = $"Công cụ '{_toolToDelete.Name}' đã được xóa khỏi database nhưng thư mục '{toolPath}' vẫn tồn tại.";
+                        Logger.LogWarning("Folder {ToolPath} still exists after deletion attempt", toolPath);
                     }
                 }
-                _toastSuccess = true;
-                _toastMessage = $"Công cụ '{_toolToDelete.Name}' đã được xóa thành công!";
-                Logger.LogInformation("Successfully deleted tool: {ToolName} (ID: {ToolId})", _toolToDelete.Name, _toolToDelete.Id);
+                else
+                {
+                    foreach (var group in allToolGroups)
+                    {
+                        if (group.Tools != null)
+                        {
+                            group.Tools.RemoveAll(t => t.Id == _toolToDelete.Id);
+                        }
+                    }
+                    _toastSuccess = true;
+                    _toastMessage = $"Công cụ '{_toolToDelete.Name}' đã được xóa thành công!";
+                    Logger.LogInformation("Successfully deleted tool: {ToolName} (ID: {ToolId})", _toolToDelete.Name, _toolToDelete.Id);
+                }
             }
             else
             {
@@ -199,7 +239,7 @@ else
             Logger.LogInformation("Set _isDeleting to false, hiding loading overlay");
             _toolToDelete = null;
             _showToast = true;
-            await Task.Delay(1000);
+            await Task.Delay(2000); // Tăng thời gian hiển thị toast lên 2 giây
             _showToast = false;
             StateHasChanged();
         }
