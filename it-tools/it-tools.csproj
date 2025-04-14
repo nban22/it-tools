@@ -9,9 +9,9 @@
     <AssemblyName>$(AssemblyName.Replace(' ', '_'))</AssemblyName>
   </PropertyGroup>
 
-	<Target Name="BuildTailwind" BeforeTargets="Build">
+	<!-- <Target Name="BuildTailwind" BeforeTargets="Build">
 		<Exec Command="npx tailwindcss -i ./Styles/app.css -o ./wwwroot/css/app.min.css" />
-	</Target>
+	</Target> -->
 
   <ItemGroup>
     <PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
