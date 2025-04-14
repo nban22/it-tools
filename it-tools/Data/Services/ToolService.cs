@@ -3,6 +3,8 @@ namespace it_tools.Data.Services;
 using it_tools.Data.DTOs;
 using it_tools.Data.Repositories;
 using Microsoft.AspNetCore.Components.Forms;
+using System.Reflection;
+using System.IO.Abstractions;
 
 public class ToolService : IToolService
 {
@@ -11,19 +13,22 @@ public class ToolService : IToolService
     private readonly ToolAssemblyService _toolAssemblyService;
     private readonly IWebHostEnvironment _environment;
     private readonly CleanupService _cleanupService;
+    private readonly IFileSystem _fileSystem;
 
     public ToolService(
         IToolRepository toolRepository,
         ILogger<ToolService> logger,
         IWebHostEnvironment environment,
         ToolAssemblyService toolAssemblyService,
-        CleanupService cleanupService)
+        CleanupService cleanupService,
+        IFileSystem fileSystem)
     {
         _toolRepository = toolRepository;
         _logger = logger;
         _environment = environment;
         _toolAssemblyService = toolAssemblyService;
         _cleanupService = cleanupService;
+        _fileSystem = fileSystem;
     }
 
     public async Task<ToolDto?> UploadToolAsync(IBrowserFile file)
@@ -32,37 +37,36 @@ public class ToolService : IToolService
         {
             throw new ArgumentException("Uploaded file must be a DLL file.", nameof(file));
         }
+
         string uploadsFolder = Path.Combine(_environment.ContentRootPath, "ToolPlugins");
-        Directory.CreateDirectory(uploadsFolder);
+        _fileSystem.Directory.CreateDirectory(uploadsFolder);
 
         string uniqueFolderName = Guid.NewGuid().ToString();
         string toolFolder = Path.Combine(uploadsFolder, uniqueFolderName);
+        _fileSystem.Directory.CreateDirectory(toolFolder);
 
-        Directory.CreateDirectory(toolFolder);
+        string dllPath = Path.Combine(toolFolder, file.Name);
+
         try
         {
-            string dllPath = Path.Combine(toolFolder, file.Name);
-
             using (var stream = file.OpenReadStream())
-            using (var fileStream = new FileStream(dllPath, FileMode.Create))
+            using (var fileStream = _fileSystem.FileStream.New(dllPath, FileMode.Create))
             {
                 await stream.CopyToAsync(fileStream);
             }
 
-            var fileInfo = new FileInfo(dllPath);
-            if (fileInfo.Exists)
-            {
-                _logger.LogInformation("Saved file verified. Size: {FileSize} bytes, Last write time: {LastWriteTime}",
-                    fileInfo.Length, fileInfo.LastWriteTime);
-            }
-            else
+            var fileInfo = _fileSystem.FileInfo.New(dllPath);
+            if (!_fileSystem.File.Exists(fileInfo.FullName))
             {
                 throw new IOException("Không thể xác minh file DLL đã lưu");
             }
+            _logger.LogInformation("Saved file verified. Size: {FileSize} bytes, Last write time: {LastWriteTime}",
+                fileInfo.Length, fileInfo.LastWriteTime);
 
+            Assembly? assembly = null;
             try
             {
-                var assembly = _toolAssemblyService.LoadToolAssembly(dllPath);
+                assembly = _toolAssemblyService.LoadToolAssembly(dllPath);
                 var toolDto = _toolAssemblyService.ExtractToolMetadata(assembly);
 
                 toolDto.DllPath = dllPath;
@@ -72,14 +76,48 @@ public class ToolService : IToolService
                 {
                     throw new InvalidOperationException("Tool group cannot be null.");
                 }
-                var savedTool = await _toolRepository.AddToolAsync(toolDto, toolDto.Group);
 
-                return savedTool;
+                var existingTool = await _toolRepository.GetToolBySlugAsync(toolDto.Slug ?? throw new InvalidOperationException("Tool slug cannot be null."));
+                if (existingTool != null)
+                {
+                    _logger.LogInformation("Tool with slug {Slug} already exists. Updating existing tool.", toolDto.Slug);
+                    if (!string.IsNullOrEmpty(existingTool.DllPath))
+                    {
+                        string oldToolPath = Path.GetDirectoryName(existingTool.DllPath) ?? string.Empty;
+                        if (_fileSystem.Directory.Exists(oldToolPath))
+                        {
+                            await _toolAssemblyService.UnloadToolAssemblyAsync(existingTool.DllPath);
+                            await ScheduleFolderDeletionAsync(oldToolPath);
+                        }
+                    }
+
+                    existingTool.Name = toolDto.Name;
+                    existingTool.Description = toolDto.Description;
+                    existingTool.DllPath = dllPath;
+                    existingTool.IsEnabled = toolDto.IsEnabled;
+                    existingTool.IsPremium = toolDto.IsPremium;
+                    existingTool.Group = toolDto.Group;
+                    await _toolRepository.UpdateToolAsync(existingTool);
+                    return existingTool;
+                }
+                else
+                {
+                    var savedTool = await _toolRepository.AddToolAsync(toolDto, toolDto.Group);
+                    _logger.LogInformation("Successfully added new tool with slug {Slug}", savedTool.Slug);
+                    return savedTool;
+                }
             }
             catch (BadImageFormatException ex)
             {
                 _logger.LogError(ex, "Invalid DLL format. The file is not a valid .NET assembly");
                 throw new InvalidOperationException("File DLL không hợp lệ hoặc không phải là assembly .NET", ex);
+            }
+            finally
+            {
+                if (assembly != null)
+                {
+                    await _toolAssemblyService.UnloadToolAssemblyAsync(dllPath);
+                }
             }
         }
         catch (Exception ex)
@@ -96,12 +134,17 @@ public class ToolService : IToolService
             _logger.LogInformation("Cleaning up tool folder: {ToolFolder}", toolFolder);
             try
             {
-                Directory.Delete(toolFolder, true);
-                _logger.LogInformation("Tool folder cleanup successful");
+                if (_fileSystem.Directory.Exists(toolFolder))
+                {
+                    await _toolAssemblyService.UnloadToolAssemblyAsync(dllPath); // Đảm bảo unload trước khi xóa
+                    _fileSystem.Directory.Delete(toolFolder, true);
+                    _logger.LogInformation("Tool folder cleanup successful");
+                }
             }
             catch (Exception cleanupEx)
             {
-                _logger.LogWarning(cleanupEx, "Failed to clean up tool folder");
+                _logger.LogWarning(cleanupEx, "Failed to clean up tool folder: {ToolFolder}. Scheduling for later deletion.", toolFolder);
+                await ScheduleFolderDeletionAsync(toolFolder); // Lập lịch xóa nếu không xóa được ngay
             }
             throw;
         }
@@ -118,32 +161,33 @@ public class ToolService : IToolService
                 return false;
             }
 
+            string toolPath = string.Empty;
             if (!string.IsNullOrEmpty(tool.DllPath))
             {
-                _toolAssemblyService.UnloadToolAssembly(tool.DllPath);
-            }
-
-            string toolPath = Path.GetDirectoryName(tool.DllPath) ?? string.Empty;
-            if (Directory.Exists(toolPath))
-            {
-                bool deleted = await TryDeleteDirectoryAsync(toolPath, maxRetries: 2, delayMs: 0);
-                if (!deleted)
-                {
-                    _logger.LogWarning("Failed to delete tool folder immediately. Running CleanupService...");
-                    await _cleanupService.CleanupPendingDeletionsAsync();
-                }
+                toolPath = Path.GetDirectoryName(tool.DllPath) ?? string.Empty;
+                await _toolAssemblyService.UnloadToolAssemblyAsync(tool.DllPath);
             }
 
             var result = await _toolRepository.DeleteToolAsync(toolId);
-            if (result)
+            if (!result)
             {
-                _logger.LogInformation("Successfully deleted tool with ID {ToolId}", toolId);
+                _logger.LogWarning("Failed to delete tool with ID {ToolId} from database", toolId);
+                return false;
+            }
+
+            _logger.LogInformation("Successfully deleted tool with ID {ToolId} from database", toolId);
+
+            if (!string.IsNullOrEmpty(toolPath) && _fileSystem.Directory.Exists(toolPath))
+            {
+                await ScheduleFolderDeletionAsync(toolPath);
+                _logger.LogInformation("Scheduled deletion for tool folder: {ToolPath}", toolPath);
             }
             else
             {
-                _logger.LogWarning("Failed to delete tool with ID {ToolId} from database", toolId);
+                _logger.LogInformation("No tool folder to schedule for deletion for tool ID {ToolId}", toolId);
             }
-            return result;
+
+            return true;
         }
         catch (Exception ex)
         {
@@ -152,53 +196,17 @@ public class ToolService : IToolService
         }
     }
 
-    private async Task<bool> TryDeleteDirectoryAsync(string toolPath, int maxRetries = 2, int delayMs = 0)
+    private async Task ScheduleFolderDeletionAsync(string toolPath)
     {
-        for (int i = 0; i < maxRetries; i++)
+        try
         {
-            try
-            {
-                if (Directory.Exists(toolPath))
-                {
-                    foreach (var file in Directory.GetFiles(toolPath, "*", SearchOption.AllDirectories))
-                    {
-                        try
-                        {
-                            File.Open(file, FileMode.Open, FileAccess.ReadWrite, FileShare.None).Dispose();
-                            _logger.LogInformation("File {File} is not locked in folder: {ToolPath}", file, toolPath);
-                        }
-                        catch (IOException ex)
-                        {
-                            _logger.LogWarning(ex, "File {File} is still locked in folder: {ToolPath}", file, toolPath);
-                            throw new UnauthorizedAccessException($"File {file} is locked.", ex);
-                        }
-                    }
-
-                    Directory.Delete(toolPath, true);
-                    _logger.LogInformation("Deleted tool folder: {ToolPath}", toolPath);
-                    return true;
-                }
-                return true;
-            }
-            catch (UnauthorizedAccessException ex)
-            {
-                _logger.LogWarning(ex, "Attempt {Attempt} failed to delete tool folder: {ToolPath}. Retrying...", i + 1, toolPath);
-                if (i == maxRetries - 1)
-                {
-                    _logger.LogWarning("Failed to delete tool folder after {MaxRetries} attempts. Scheduling for deletion: {ToolPath}", maxRetries, toolPath);
-                    try
-                    {
-                        await File.AppendAllTextAsync("pending-deletions.txt", toolPath + Environment.NewLine);
-                    }
-                    catch (Exception writeEx)
-                    {
-                        _logger.LogError(writeEx, "Failed to schedule deletion for {ToolPath}.", toolPath);
-                    }
-                    return false;
-                }
-                await Task.Delay(delayMs);
-            }
+            string pendingFile = Path.Combine(_environment.ContentRootPath, "pending-deletions.txt");
+            await _fileSystem.File.AppendAllTextAsync(pendingFile, toolPath + Environment.NewLine);
+            _logger.LogInformation("Scheduled folder deletion: {ToolPath}", toolPath);
         }
-        return false;
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to schedule folder deletion for {ToolPath}", toolPath);
+        }
     }
 }

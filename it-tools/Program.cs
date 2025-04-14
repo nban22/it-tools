@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using it_tools.Components.Auth;
 using it_tools.Data.Services;
 using it_tools.Data.Repositories;
+using System.IO.Abstractions; // Thêm namespace
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -29,8 +30,8 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
     });
 
 builder.Services.AddAuthorization(options =>
-    {
-        options.AddPolicy("AdminOnly", policy => policy.RequireRole("Admin"));
+{
+    options.AddPolicy("AdminOnly", policy => policy.RequireRole("Admin"));
 });
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
@@ -50,6 +51,10 @@ builder.Services.AddScoped<ISearchService, SearchService>();
 builder.Services.AddScoped<IAdminService, AdminService>();
 
 builder.Services.AddSingleton<CleanupService>();
+builder.Services.AddHostedService<CleanupService>();
+
+// Đăng ký IFileSystem
+builder.Services.AddSingleton<IFileSystem, FileSystem>();
 
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
@@ -60,9 +65,6 @@ using (var scope = app.Services.CreateScope())
     var services = scope.ServiceProvider;
     var contextFactory = services.GetRequiredService<IDbContextFactory<ApplicationDbContext>>();
     await DbInitializer.SeedAdminUser(contextFactory);
-
-    var cleanupService = services.GetRequiredService<CleanupService>();
-    await cleanupService.CleanupPendingDeletionsAsync();
 }
 
 if (app.Environment.IsDevelopment())

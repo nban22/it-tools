@@ -1,4 +1,3 @@
-
 using it_tools.Data.DTOs;
 using it_tools.Data.Models;
 
@@ -6,7 +5,7 @@ namespace it_tools.Data.Repositories;
 
 public interface IToolRepository
 {
-    Task<Tool?> GetToolByIdAsync(string toolId);
+    Task<ToolDto?> GetToolByIdAsync(string toolId); // Thay đổi từ Tool? sang ToolDto?
     Task<List<ToolDto>> GetAllToolsForUnauthorizedAsync();
     Task<List<ToolDto>> GetAllToolsForUserAsync(string userId);
     Task<List<ToolGroupDto>> GetAllToolGroups();
@@ -16,5 +15,6 @@ public interface IToolRepository
     Task<List<ToolGroupDto>> GetAllToolGroupsForAdminAsync();
     Task<bool> DeleteToolAsync(string toolId);
     Task<ToolDto> AddToolAsync(ToolDto newTool, ToolGroupDto toolGroupDto);
-    
+    Task UpdateToolAsync(ToolDto tool);
+    Task<ToolDto?> GetToolBySlugAsync(string slug);
 }
