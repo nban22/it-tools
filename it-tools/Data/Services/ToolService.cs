@@ -10,17 +10,20 @@ public class ToolService : IToolService
     private readonly ILogger<ToolService> _logger;
     private readonly ToolAssemblyService _toolAssemblyService;
     private readonly IWebHostEnvironment _environment;
+    private readonly CleanupService _cleanupService;
 
     public ToolService(
         IToolRepository toolRepository,
         ILogger<ToolService> logger,
         IWebHostEnvironment environment,
-        ToolAssemblyService toolAssemblyService)
+        ToolAssemblyService toolAssemblyService,
+        CleanupService cleanupService)
     {
         _toolRepository = toolRepository;
         _logger = logger;
         _environment = environment;
         _toolAssemblyService = toolAssemblyService;
+        _cleanupService = cleanupService;
     }
 
     public async Task<ToolDto?> UploadToolAsync(IBrowserFile file)
@@ -40,13 +43,12 @@ public class ToolService : IToolService
         {
             string dllPath = Path.Combine(toolFolder, file.Name);
 
-            // Đọc và lưu file DLL
             using (var stream = file.OpenReadStream())
             using (var fileStream = new FileStream(dllPath, FileMode.Create))
             {
                 await stream.CopyToAsync(fileStream);
             }
-            // Verify the saved file
+
             var fileInfo = new FileInfo(dllPath);
             if (fileInfo.Exists)
             {
@@ -58,17 +60,14 @@ public class ToolService : IToolService
                 throw new IOException("Không thể xác minh file DLL đã lưu");
             }
 
-            // Tải assembly và đọc metadata
             try
             {
                 var assembly = _toolAssemblyService.LoadToolAssembly(dllPath);
-
                 var toolDto = _toolAssemblyService.ExtractToolMetadata(assembly);
 
                 toolDto.DllPath = dllPath;
                 toolDto.IsEnabled = false;
 
-                // Lưu vào database
                 if (toolDto.Group == null)
                 {
                     throw new InvalidOperationException("Tool group cannot be null.");
@@ -119,20 +118,22 @@ public class ToolService : IToolService
                 return false;
             }
 
-            // Unload assembly trước khi xóa
             if (!string.IsNullOrEmpty(tool.DllPath))
             {
                 _toolAssemblyService.UnloadToolAssembly(tool.DllPath);
             }
 
-            // Xóa thư mục chứa file DLL
             string toolPath = Path.GetDirectoryName(tool.DllPath) ?? string.Empty;
             if (Directory.Exists(toolPath))
             {
-                await TryDeleteDirectoryAsync(toolPath);
+                bool deleted = await TryDeleteDirectoryAsync(toolPath, maxRetries: 2, delayMs: 0);
+                if (!deleted)
+                {
+                    _logger.LogWarning("Failed to delete tool folder immediately. Running CleanupService...");
+                    await _cleanupService.CleanupPendingDeletionsAsync();
+                }
             }
 
-            // Xóa bản ghi trong cơ sở dữ liệu
             var result = await _toolRepository.DeleteToolAsync(toolId);
             if (result)
             {
@@ -151,7 +152,7 @@ public class ToolService : IToolService
         }
     }
 
-    private async Task<bool> TryDeleteDirectoryAsync(string toolPath, int maxRetries = 3, int delayMs = 500)
+    private async Task<bool> TryDeleteDirectoryAsync(string toolPath, int maxRetries = 2, int delayMs = 0)
     {
         for (int i = 0; i < maxRetries; i++)
         {
@@ -159,23 +160,43 @@ public class ToolService : IToolService
             {
                 if (Directory.Exists(toolPath))
                 {
+                    foreach (var file in Directory.GetFiles(toolPath, "*", SearchOption.AllDirectories))
+                    {
+                        try
+                        {
+                            File.Open(file, FileMode.Open, FileAccess.ReadWrite, FileShare.None).Dispose();
+                            _logger.LogInformation("File {File} is not locked in folder: {ToolPath}", file, toolPath);
+                        }
+                        catch (IOException ex)
+                        {
+                            _logger.LogWarning(ex, "File {File} is still locked in folder: {ToolPath}", file, toolPath);
+                            throw new UnauthorizedAccessException($"File {file} is locked.", ex);
+                        }
+                    }
+
                     Directory.Delete(toolPath, true);
                     _logger.LogInformation("Deleted tool folder: {ToolPath}", toolPath);
                     return true;
                 }
-                return true; // Thư mục không tồn tại, coi như thành công
+                return true;
             }
             catch (UnauthorizedAccessException ex)
             {
                 _logger.LogWarning(ex, "Attempt {Attempt} failed to delete tool folder: {ToolPath}. Retrying...", i + 1, toolPath);
                 if (i == maxRetries - 1)
                 {
-                    // Nếu lần cuối vẫn thất bại, lưu vào danh sách pending deletions
-                    _logger.LogWarning("Failed to delete tool folder after {MaxRetries} attempts. Scheduling for deletion on startup: {ToolPath}", maxRetries, toolPath);
-                    await File.AppendAllTextAsync("pending-deletions.txt", toolPath + Environment.NewLine);
+                    _logger.LogWarning("Failed to delete tool folder after {MaxRetries} attempts. Scheduling for deletion: {ToolPath}", maxRetries, toolPath);
+                    try
+                    {
+                        await File.AppendAllTextAsync("pending-deletions.txt", toolPath + Environment.NewLine);
+                    }
+                    catch (Exception writeEx)
+                    {
+                        _logger.LogError(writeEx, "Failed to schedule deletion for {ToolPath}.", toolPath);
+                    }
                     return false;
                 }
-                await Task.Delay(delayMs); // Đợi trước khi thử lại
+                await Task.Delay(delayMs);
             }
         }
         return false;

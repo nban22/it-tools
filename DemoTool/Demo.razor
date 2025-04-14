@@ -1,0 +1,172 @@
+﻿@using it_tools.ToolDevelopment.Base
+@using it_tools.ToolDevelopment.Attributes
+@using Microsoft.JSInterop
+@inject IJSRuntime JSRuntime
+@inherits ToolComponentBase
+
+<div class="p-6 bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen">
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-8 animate-fade-in">
+        <div>
+            <h2 class="text-3xl font-extrabold text-gray-900 tracking-tight">@Name</h2>
+            <p class="text-gray-600 mt-1">@Description</p>
+        </div>
+    </div>
+
+    <!-- Form -->
+    <div class="bg-white p-6 rounded-2xl shadow-xl mb-6 animate-slide-in">
+        <div class="flex items-end space-x-4">
+            <div class="flex-1">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Number of Records:</label>
+                <input type="number" @bind="_recordCount" min="1" max="100" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 h-12" />
+            </div>
+            <button @onclick="GenerateMockData" class="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 h-12">
+                Generate Mock Data
+            </button>
+        </div>
+    </div>
+
+    <!-- Results -->
+    @if (_mockData.Any())
+    {
+        <div class="bg-white p-6 rounded-2xl shadow-xl animate-slide-in">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-xl font-semibold text-gray-800">Generated Data (@_mockData.Count records)</h3>
+                <button @onclick="CopyToClipboard" class="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all duration-200 shadow-md">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                    <span>Copy as JSON</span>
+                </button>
+            </div>
+            <div class="overflow-x-auto max-h-96">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50 sticky top-0">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Address</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date of Birth</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        @foreach (var record in _mockData)
+                        {
+                            <tr class="hover:bg-gray-50 transition-all duration-200">
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">@record.Name</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">@record.Email</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">@record.Phone</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">@record.Address</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">@record.DateOfBirth.ToString("yyyy-MM-dd")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+</div>
+
+<!-- Toast Notification -->
+@if (_showToast)
+{
+    <div class="fixed bottom-6 right-6 z-50 animate-toast-in">
+        <div class="flex items-center bg-green-500 text-white px-4 py-3 rounded-lg shadow-lg">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+            </svg>
+            <span>Data copied to clipboard as JSON!</span>
+        </div>
+    </div>
+}
+
+<style>
+    /* Custom Animations */
+    @@keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+
+    @@keyframes slideIn {
+        from { transform: translateY(-20px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+    }
+
+    @@keyframes toastIn {
+        from { transform: translateY(20px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+    }
+
+    @@keyframes toastOut {
+        from { transform: translateY(0); opacity: 1; }
+        to { transform: translateY(20px); opacity: 0; }
+    }
+
+    .animate-fade-in {
+        animation: fadeIn 0.5s ease-in-out;
+    }
+
+    .animate-slide-in {
+        animation: slideIn 0.5s ease-in-out;
+    }
+
+    .animate-toast-in {
+        animation: toastIn 0.3s ease-in-out;
+    }
+
+    .animate-toast-out {
+        animation: toastOut 0.3s ease-in-out forwards;
+    }
+</style>
+
+@code {
+    private int _recordCount = 10;
+    private List<MockDataRecord> _mockData = new();
+    private bool _showToast = false;
+
+    // Giữ nguyên các thuộc tính metadata
+    public override string Name => "Demo3 Generator";
+    public override string Description => "Demo3 Description";
+    public override string Group => "Demo2 Tools";
+    public override string Icon => "😂";
+
+    private record MockDataRecord(string Name, string Email, string Phone, string Address, DateTime DateOfBirth);
+
+    private void GenerateMockData()
+    {
+        _mockData.Clear();
+        var random = Random.Shared;
+
+        // Danh sách dữ liệu giả để chọn ngẫu nhiên
+        var firstNames = new[] { "John", "Emma", "Michael", "Sophia", "James", "Olivia", "William", "Ava", "David", "Mia" };
+        var lastNames = new[] { "Smith", "Johnson", "Brown", "Taylor", "Wilson", "Davis", "Clark", "Lewis", "Walker", "Hall" };
+        var domains = new[] { "gmail.com", "yahoo.com", "hotmail.com", "example.com", "outlook.com" };
+        var streets = new[] { "Main St", "Park Ave", "Oak Rd", "Cedar Ln", "Maple Dr", "Pine St", "Elm Ave", "Birch Rd", "Willow Ln", "Sycamore Dr" };
+        var cities = new[] { "New York", "Los Angeles", "Chicago", "Houston", "Phoenix", "Philadelphia", "San Antonio", "San Diego", "Dallas", "San Jose" };
+
+        for (int i = 0; i < _recordCount; i++)
+        {
+            var firstName = firstNames[random.Next(firstNames.Length)];
+            var lastName = lastNames[random.Next(lastNames.Length)];
+            var name = $"{firstName} {lastName}";
+            var email = $"{firstName.ToLower()}.{lastName.ToLower()}{random.Next(100)}@{domains[random.Next(domains.Length)]}";
+            var phone = $"(+1) {random.Next(200, 999)}-{random.Next(100, 999)}-{random.Next(1000, 9999)}";
+            var address = $"{random.Next(1, 9999)} {streets[random.Next(streets.Length)]}, {cities[random.Next(cities.Length)]}, USA";
+            var dateOfBirth = DateTime.Today.AddDays(-random.Next(365 * 20, 365 * 60)); // Tuổi từ 20 đến 60
+
+            _mockData.Add(new MockDataRecord(name, email, phone, address, dateOfBirth));
+        }
+    }
+
+    private async Task CopyToClipboard()
+    {
+        var json = System.Text.Json.JsonSerializer.Serialize(_mockData, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+        await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", json);
+
+        // Hiển thị toast notification
+        _showToast = true;
+        await Task.Delay(3000); // Hiển thị trong 3 giây
+        _showToast = false;
+    }
+}

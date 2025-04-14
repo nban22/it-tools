@@ -4,6 +4,8 @@
 @layout it_tools.Components.Admin.Layout.AdminLayout
 @inject it_tools.Data.Services.IToolService ToolService
 @inject it_tools.Data.Repositories.IToolRepository ToolRepository
+@inject IJSRuntime JSRuntime
+@inject ILogger<DeleteTool> Logger
 
 <h3 class="text-xl font-semibold text-gray-800 mb-6">Xóa công cụ</h3>
 
@@ -11,12 +13,16 @@
 {
     <p>Đang tải...</p>
 }
+else if (!allToolGroups.Any() || allToolGroups.All(g => g.Tools == null || !g.Tools.Any()))
+{
+    <p class="text-gray-500">Không có công cụ nào để hiển thị.</p>
+}
 else
 {
     <ul class="space-y-4">
         @foreach (var toolGroup in allToolGroups)
         {
-            if (toolGroup.Tools != null)
+            if (toolGroup.Tools != null && toolGroup.Tools.Any())
             {
                 @foreach (var tool in toolGroup.Tools)
                 {
@@ -24,8 +30,8 @@ else
                         <span class="text-gray-900 font-bold">@toolGroup.Name</span>
                         <div class="flex justify-between items-center">
                             <span class="text-gray-700">@tool.Name</span>
-                            <button @onclick=@(() => DeleteSelectedTool(tool))
-                                class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">
+                            <button @onclick=@(() => ShowDeleteConfirmation(tool))
+                                    class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">
                                 Xóa
                             </button>
                         </div>
@@ -36,18 +42,166 @@ else
     </ul>
 }
 
+<!-- Modal xác nhận xóa -->
+@if (_showDeleteModal)
+{
+    <div class="fixed inset-0 flex items-center justify-center z-50">
+        <!-- Overlay -->
+        <div class="fixed inset-0 bg-black opacity-50"></div>
+
+        <!-- Modal -->
+        <div class="bg-white rounded-lg shadow-lg p-6 z-10 w-96">
+            <h3 class="text-lg font-semibold text-gray-800 mb-4">Xác nhận xóa</h3>
+            <p class="text-gray-600 mb-6">Bạn có chắc chắn muốn xóa công cụ <span class="font-bold">@_toolToDelete?.Name</span> không?</p>
+            <div class="flex justify-end space-x-3">
+                <button @onclick="CancelDelete" class="bg-gray-300 text-gray-800 px-4 py-2 rounded hover:bg-gray-400">
+                    Hủy
+                </button>
+                <button @onclick="ConfirmDelete" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">
+                    Xóa
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Loading overlay -->
+@if (_isDeleting)
+{
+    <div class="fixed inset-0 flex items-center justify-center z-50">
+        <!-- Overlay -->
+        <div class="fixed inset-0 bg-black opacity-50"></div>
+
+        <!-- Loading spinner -->
+        <div class="flex flex-col items-center z-10">
+            <div class="spinner"></div>
+            <p class="text-white text-lg mt-4">Đang xóa công cụ, vui lòng chờ...</p>
+        </div>
+    </div>
+}
+
+<!-- Toast Notification -->
+@if (_showToast)
+{
+    <div class="fixed bottom-6 right-6 z-50 animate-toast-in">
+        <div class="flex items-center bg-@(_toastSuccess ? "green" : "red")-500 text-white px-4 py-3 rounded-lg shadow-lg">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="@(_toastSuccess ? "M5 13l4 4L19 7" : "M6 18L18 6M6 6l12 12")" />
+            </svg>
+            <span>@_toastMessage</span>
+        </div>
+    </div>
+}
+
+<style>
+    @@keyframes toastIn {
+        from { transform: translateY(20px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+    }
+
+    @@keyframes toastOut {
+        from { transform: translateY(0); opacity: 1; }
+        to { transform: translateY(20px); opacity: 0; }
+    }
+
+    .animate-toast-in {
+        animation: toastIn 0.3s ease-in-out;
+    }
+
+    .animate-toast-out {
+        animation: toastOut 0.3s ease-in-out forwards;
+    }
+
+    /* Spinner animation */
+    @@keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    .spinner {
+        border: 4px solid rgba(255, 255, 255, 0.3);
+        border-top: 4px solid white;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        animation: spin 1s linear infinite;
+    }
+</style>
+
 @code {
     private List<ToolGroupDto>? allToolGroups;
+    private bool _showToast = false;
+    private bool _toastSuccess = false;
+    private string _toastMessage = "";
+    private bool _showDeleteModal = false;
+    private ToolDto? _toolToDelete;
+    private bool _isDeleting = false;
 
     protected override async Task OnInitializedAsync()
     {
         allToolGroups = await ToolRepository.GetAllToolGroupsForAdminAsync();
-        @* tools = allToolGroups.SelectMany(g => g.Tools).ToList(); // Lấy danh sách công cụ từ tất cả các nhóm *@
+        Logger.LogInformation("Loaded {Count} tool groups", allToolGroups?.Count ?? 0);
     }
 
-    private async Task DeleteSelectedTool(ToolDto tool)
+    private void ShowDeleteConfirmation(ToolDto tool)
     {
-        await ToolService.DeleteToolAsync(tool.Id);
-        allToolGroups = await ToolRepository.GetAllToolGroupsForAdminAsync();
+        _toolToDelete = tool;
+        _showDeleteModal = true;
+        Logger.LogInformation("Showing delete confirmation for tool: {ToolName} (ID: {ToolId})", tool.Name, tool.Id);
+    }
+
+    private void CancelDelete()
+    {
+        _showDeleteModal = false;
+        _toolToDelete = null;
+        Logger.LogInformation("Delete operation canceled");
+    }
+
+    private async Task ConfirmDelete()
+    {
+        if (_toolToDelete == null) return;
+
+        try
+        {
+            _isDeleting = true;
+            _showDeleteModal = false;
+            Logger.LogInformation("Set _isDeleting to true, showing loading overlay");
+            StateHasChanged();
+
+            // Thêm độ trễ để đảm bảo giao diện loading được hiển thị
+            await Task.Delay(500);
+
+            Logger.LogInformation("Attempting to delete tool: {ToolName} (ID: {ToolId})", _toolToDelete.Name, _toolToDelete.Id);
+            var result = await ToolService.DeleteToolAsync(_toolToDelete.Id);
+            if (result)
+            {
+                foreach (var group in allToolGroups)
+                {
+                    if (group.Tools != null)
+                    {
+                        group.Tools.RemoveAll(t => t.Id == _toolToDelete.Id);
+                    }
+                }
+                _toastSuccess = true;
+                _toastMessage = $"Công cụ '{_toolToDelete.Name}' đã được xóa thành công!";
+                Logger.LogInformation("Successfully deleted tool: {ToolName} (ID: {ToolId})", _toolToDelete.Name, _toolToDelete.Id);
+            }
+            else
+            {
+                _toastSuccess = false;
+                _toastMessage = $"Không thể xóa công cụ '{_toolToDelete.Name}'. Vui lòng thử lại.";
+                Logger.LogWarning("Failed to delete tool: {ToolName} (ID: {ToolId})", _toolToDelete.Name, _toolToDelete.Id);
+            }
+        }
+        finally
+        {
+            _isDeleting = false;
+            Logger.LogInformation("Set _isDeleting to false, hiding loading overlay");
+            _toolToDelete = null;
+            _showToast = true;
+            await Task.Delay(1000);
+            _showToast = false;
+            StateHasChanged();
+        }
     }
 }
