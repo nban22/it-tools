@@ -9,12 +9,12 @@
 
 <PageTitle>IT-Tools</PageTitle>
 
-<div class="flex h-screen w-screen bg-gray-100">
-    <div class="@GetSidebarClass() border-r border-gray-200">
+<div class="flex flex-row h-screen w-screen bg-gray-100 min-h-0">
+    <div class="@GetSidebarClass() border-r border-gray-200 flex flex-col min-w-0">
         <NavMenu />
     </div>
 
-    <main class="flex-1 flex min-h-0 flex-col">
+    <main class="flex-1 flex flex-col overflow-auto">
         <div class="h-16 bg-white shadow-sm flex justify-between items-center px-6">
             <div class="flex items-center space-x-2">
                 <button @onclick="ToggleSidebar" 
@@ -120,7 +120,7 @@
             </AuthorizeView>
         </div>
 
-        <div class="flex-1 overflow-y-auto p-6 bg-gray-50">
+        <div class="flex-1 overflow-x-auto p-6 bg-gray-50">
             @Body
         </div>
     </main>
@@ -174,7 +174,7 @@
 
     private string GetSidebarClass()
     {
-        return $"bg-white h-screen w-72 {(isSidebarOpen ? "shadow-lg" : "hidden")}";
+        return $"bg-white w-72 {(isSidebarOpen ? "shadow-lg" : "hidden")}";
     }
 
     private void ToggleSidebar()
