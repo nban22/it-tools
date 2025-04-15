@@ -1,0 +1,277 @@
+﻿@using it_tools.ToolDevelopment.Base
+@using it_tools.ToolDevelopment.Attributes
+@using System.Drawing
+@using System.IO
+@using Microsoft.AspNetCore.Components
+@using Microsoft.JSInterop
+@using QRCoder
+@attribute [ToolComponentAttribute(true)]
+@inherits ToolComponentBase
+
+@inject IJSRuntime JSRuntime
+
+@implements IAsyncDisposable
+
+<div class="p-6 bg-white rounded-xl shadow-lg">
+    <div class="flex items-center mb-6">
+        <div class="rounded-full bg-blue-600 p-3 mr-4">
+            <span class="text-2xl text-white">📷</span>
+        </div>
+        <div>
+            <h2 class="text-2xl font-bold text-gray-800">@Name</h2>
+            <p class="text-gray-600">@Description</p>
+        </div>
+    </div>
+
+    <div class="space-y-6">
+        <!-- Content Input -->
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">QR Content:</label>
+            <textarea @bind="_qrContent"
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                rows="3" placeholder="Enter URL or text to encode"></textarea>
+        </div>
+
+        <!-- Options Section -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- Size Selection -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">QR Code Size:</label>
+                <select @bind="_qrSize"
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <option value="200">Small (200px)</option>
+                    <option value="300">Medium (300px)</option>
+                    <option value="400">Large (400px)</option>
+                    <option value="500">Extra Large (500px)</option>
+                </select>
+            </div>
+
+            <!-- Color Selection -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">QR Code Color:</label>
+                <div class="flex space-x-2">
+                    <input type="color" @bind="_qrColor" class="h-10 w-16 rounded border border-gray-300" />
+                    <input type="text" @bind="_qrColor" class="flex-1 px-4 py-2 border border-gray-300 rounded-lg"
+                        placeholder="#000000" />
+                </div>
+            </div>
+        </div>
+
+        <div class="flex flex-wrap gap-4">
+            <!-- Error Correction Level -->
+            <div class="min-w-[200px]">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Error Correction:</label>
+                <select @bind="_errorCorrectionLevel"
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <option value="L">Low (7%)</option>
+                    <option value="M">Medium (15%)</option>
+                    <option value="Q">Quartile (25%)</option>
+                    <option value="H">High (30%)</option>
+                </select>
+            </div>
+
+            <!-- Background Color -->
+            <div class="min-w-[200px]">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Background Color:</label>
+                <div class="flex space-x-2">
+                    <input type="color" @bind="_bgColor" class="h-10 w-16 rounded border border-gray-300" />
+                    <input type="text" @bind="_bgColor" class="flex-1 px-4 py-2 border border-gray-300 rounded-lg"
+                        placeholder="#FFFFFF" />
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex space-x-4">
+            <button @onclick="GenerateQRCode"
+                class="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors duration-200 flex items-center">
+                <span class="mr-2">✨</span> Generate QR Code
+            </button>
+
+            @if (!string.IsNullOrEmpty(_qrCodeBase64))
+            {
+                <button @onclick="DownloadQRCode"
+                    class="px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors duration-200 flex items-center">
+                    <span class="mr-2">⬇️</span> Download
+                </button>
+            }
+        </div>
+
+        <!-- QR Code Display -->
+        @if (!string.IsNullOrEmpty(_qrCodeBase64))
+        {
+            <div class="mt-6 flex flex-col items-center border border-gray-200 rounded-lg p-6 bg-gray-50">
+                <div class="mb-4">
+                    <img src="data:image/png;base64,@_qrCodeBase64" alt="Generated QR Code"
+                        style="max-width: 100%; height: auto;" />
+                </div>
+                <p class="text-sm text-gray-600">Scan to test!</p>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private string _qrContent = "";
+    private string _qrCodeBase64 = "";
+    private int _qrSize = 300;
+    private string _qrColor = "#000000";
+    private string _bgColor = "#FFFFFF";
+    private string _errorCorrectionLevel = "M";
+    @* private IJSObjectReference _jsModule; *@
+
+    // Implement required properties from ToolComponentBase
+    public override string Name => "QR Code Generator";
+    public override string Description => "Generate custom QR codes for URLs, text, and more";
+    public override string Group => "Image and Video Tools";
+    public override string Icon => "📷";
+
+    private bool _firstRender = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+        // Không gọi JS ở đây nữa
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _firstRender = false;
+            // Di chuyển code JavaScript Interop vào đây
+            await JSRuntime.InvokeVoidAsync("eval", @"
+                window.downloadQRCode = function(base64Data, fileName) {
+                // Create a link element
+                const downloadLink = document.createElement('a');
+                // Set the href to a data URL representing the PNG image
+                downloadLink.href = 'data:image/png;base64,' + base64Data;
+                // Set the download attribute to the desired filename
+                downloadLink.download = fileName;
+                // Hide the link (optional)
+                downloadLink.style.display = 'none';
+                // Add the link to the DOM (required for Firefox)
+                document.body.appendChild(downloadLink);
+                // Programmatically click the link to trigger the download
+                downloadLink.click();
+                // Clean up by removing the link from the DOM
+                document.body.removeChild(downloadLink);
+                return true;
+                }
+            ");
+        }
+
+        await base.OnAfterRenderAsync(firstRender);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        // The _jsModule is commented out and not used in the current implementation.
+        // Therefore, this DisposeAsync method is currently unnecessary and can be removed.
+    }
+
+    private void GenerateQRCode()
+    {
+        if (string.IsNullOrWhiteSpace(_qrContent))
+        {
+            return;
+        }
+
+        try
+        {
+            // Parse colors from hex strings
+            System.Drawing.Color darkColor = HexToColor(_qrColor);
+            System.Drawing.Color lightColor = HexToColor(_bgColor);
+
+            // Set error correction level
+            QRCodeGenerator.ECCLevel eccLevel = _errorCorrectionLevel switch
+            {
+                "L" => QRCodeGenerator.ECCLevel.L,
+                "M" => QRCodeGenerator.ECCLevel.M,
+                "Q" => QRCodeGenerator.ECCLevel.Q,
+                "H" => QRCodeGenerator.ECCLevel.H,
+                _ => QRCodeGenerator.ECCLevel.M
+            };
+
+            using (QRCodeGenerator qrGenerator = new QRCodeGenerator())
+            {
+                QRCodeData qrCodeData = qrGenerator.CreateQrCode(_qrContent, eccLevel);
+
+                using (QRCode qrCode = new QRCode(qrCodeData))
+                {
+                    using (Bitmap qrBitmap = qrCode.GetGraphic(
+                    pixelsPerModule: 20,
+                    darkColor: darkColor,
+                    lightColor: lightColor,
+                    drawQuietZones: true))
+                    {
+                        // Resize the bitmap
+                        using (Bitmap resizedBitmap = new Bitmap(qrBitmap, new Size(_qrSize, _qrSize)))
+                        {
+                            // Convert to base64 for display
+                            using (var memoryStream = new MemoryStream())
+                            {
+                                resizedBitmap.Save(memoryStream, System.Drawing.Imaging.ImageFormat.Png);
+                                byte[] imageBytes = memoryStream.ToArray();
+                                _qrCodeBase64 = Convert.ToBase64String(imageBytes);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error generating QR code: {ex.Message}");
+            // Could display an error message to the user here
+        }
+    }
+
+    // Remove redundant injection since we're using @inject at the top
+
+    private async Task DownloadQRCode()
+    {
+        if (string.IsNullOrEmpty(_qrCodeBase64))
+            return;
+
+        try
+        {
+            // Create a filename based on content (sanitized) or use a default name
+            string fileName = string.IsNullOrWhiteSpace(_qrContent)
+            ? "qrcode.png"
+            : $"qrcode-{SanitizeFileName(_qrContent.Substring(0, Math.Min(_qrContent.Length, 20)))}.png";
+
+            // Call JavaScript function to download the image
+            await JSRuntime.InvokeVoidAsync("window.downloadQRCode", _qrCodeBase64, fileName);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error downloading QR code: {ex.Message}");
+        }
+    }
+
+    private string SanitizeFileName(string input)
+    {
+        // Remove invalid file name characters
+        string invalidChars = System.Text.RegularExpressions.Regex.Escape(new string(Path.GetInvalidFileNameChars()));
+        string invalidRegStr = string.Format(@"([{0}]*\.+$)|([{0}]+)", invalidChars);
+
+        // Replace spaces and special characters with underscores
+        return System.Text.RegularExpressions.Regex.Replace(input, invalidRegStr, "_")
+        .Replace(" ", "_")
+        .ToLowerInvariant();
+    }
+
+    private System.Drawing.Color HexToColor(string hex)
+    {
+        // Remove # if present
+        hex = hex.Replace("#", "");
+
+        // Parse the hex string to RGB values
+        int r = int.Parse(hex.Substring(0, 2), System.Globalization.NumberStyles.HexNumber);
+        int g = int.Parse(hex.Substring(2, 2), System.Globalization.NumberStyles.HexNumber);
+        int b = int.Parse(hex.Substring(4, 2), System.Globalization.NumberStyles.HexNumber);
+
+        return System.Drawing.Color.FromArgb(r, g, b);
+    }
+}
