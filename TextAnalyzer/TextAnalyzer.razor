@@ -1,0 +1,235 @@
+﻿@using it_tools.ToolDevelopment.Base
+@using it_tools.ToolDevelopment.Attributes
+@using Microsoft.JSInterop
+@inject IJSRuntime JSRuntime
+@inherits ToolComponentBase
+
+<div class="p-6 bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen">
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-8 animate-fade-in">
+        <div>
+            <h2 class="text-3xl font-extrabold text-gray-900 tracking-tight">@Name</h2>
+            <p class="text-gray-600 mt-1">@Description</p>
+        </div>
+    </div>
+
+    <!-- Form -->
+    <div class="bg-white p-6 rounded-2xl shadow-xl mb-6 animate-slide-in">
+        <div class="space-y-6">
+            <!-- Text Input -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Enter your text:</label>
+                <textarea @bind="InputText" rows="6" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 resize-y" placeholder="Type or paste your text here..."></textarea>
+                @if (string.IsNullOrWhiteSpace(InputText) && HasSubmitted)
+                {
+                    <p class="text-red-500 text-xs mt-1">Please enter some text to analyze.</p>
+                }
+            </div>
+
+            <!-- Analyze Button -->
+            <div class="text-center">
+                <button @onclick="AnalyzeText" disabled="@_isProcessing" class="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 h-12">
+                    @if (_isProcessing)
+                    {
+                        <span>Analyzing...</span>
+                    }
+                    else
+                    {
+                        <span>Analyze Text</span>
+                    }
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Results -->
+    @if (HasSubmitted && !string.IsNullOrWhiteSpace(InputText))
+    {
+        <div class="bg-white p-6 rounded-2xl shadow-xl animate-slide-in">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-xl font-semibold text-gray-800">Analysis Results</h3>
+                <button @onclick="CopyToClipboard" disabled="@_isCopying" class="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all duration-200 shadow-md">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                    @if (_isCopying)
+                    {
+                        <span>Copying...</span>
+                    }
+                    else
+                    {
+                        <span>Copy Results</span>
+                    }
+                </button>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div class="p-4 bg-gray-50 rounded-lg">
+                    <p class="text-gray-600">Character Count (with spaces):</p>
+                    <p class="text-2xl font-semibold text-blue-600">@CharacterCount</p>
+                </div>
+                <div class="p-4 bg-gray-50 rounded-lg">
+                    <p class="text-gray-600">Character Count (without spaces):</p>
+                    <p class="text-2xl font-semibold text-blue-600">@CharacterCountNoSpaces</p>
+                </div>
+                <div class="p-4 bg-gray-50 rounded-lg">
+                    <p class="text-gray-600">Word Count:</p>
+                    <p class="text-2xl font-semibold text-blue-600">@WordCount</p>
+                </div>
+                <div class="p-4 bg-gray-50 rounded-lg">
+                    <p class="text-gray-600">Sentence Count:</p>
+                    <p class="text-2xl font-semibold text-blue-600">@SentenceCount</p>
+                </div>
+            </div>
+        </div>
+    }
+    else if (HasSubmitted && string.IsNullOrWhiteSpace(InputText))
+    {
+        <div class="bg-white p-6 rounded-2xl shadow-xl animate-slide-in">
+            <div class="text-center">
+                <p class="text-red-600">Please enter text to analyze.</p>
+            </div>
+        </div>
+    }
+</div>
+
+<!-- Toast Notification -->
+@if (_showToast)
+{
+    <div class="fixed bottom-6 right-6 z-50 animate-toast-in">
+        <div class="flex items-center bg-@(_toastSuccess ? "green" : "red")-500 text-white px-4 py-3 rounded-lg shadow-lg">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="@(_toastSuccess ? "M5 13l4 4L19 7" : "M6 18L18 6M6 6l12 12")" />
+            </svg>
+            <span>@_toastMessage</span>
+        </div>
+    </div>
+}
+
+<style>
+    @@keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+
+    @@keyframes slideIn {
+        from { transform: translateY(-20px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+    }
+
+    @@keyframes toastIn {
+        from { transform: translateY(20px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+    }
+
+    @@keyframes toastOut {
+        from { transform: translateY(0); opacity: 1; }
+        to { transform: translateY(20px); opacity: 0; }
+    }
+
+    .animate-fade-in {
+        animation: fadeIn 0.5s ease-in-out;
+    }
+
+    .animate-slide-in {
+        animation: slideIn 0.5s ease-in-out;
+    }
+
+    .animate-toast-in {
+        animation: toastIn 0.3s ease-in-out;
+    }
+
+    .animate-toast-out {
+        animation: toastOut 0.3s ease-in-out forwards;
+    }
+</style>
+
+@code {
+    private string InputText { get; set; } = "";
+    private int CharacterCount { get; set; }
+    private int CharacterCountNoSpaces { get; set; }
+    private int WordCount { get; set; }
+    private int SentenceCount { get; set; }
+    private bool HasSubmitted { get; set; }
+    private bool _isProcessing = false;
+    private bool _isCopying = false;
+    private bool _showToast = false;
+    private bool _toastSuccess = false;
+    private string _toastMessage = "";
+
+    public override string Name => "Text Analyzer";
+    public override string Description => "Analyze your text by counting characters, words, and sentences.";
+    public override string Slug => "text-analyzer";
+    public override string Group => "Measure Tools";
+    public override string Icon => "📝";
+
+    private async Task AnalyzeText()
+    {
+        HasSubmitted = true;
+
+        if (string.IsNullOrWhiteSpace(InputText))
+        {
+            CharacterCount = 0;
+            CharacterCountNoSpaces = 0;
+            WordCount = 0;
+            SentenceCount = 0;
+            ShowToast(false, "Please enter text to analyze.");
+            return;
+        }
+
+        _isProcessing = true;
+        try
+        {
+            await Task.Delay(500); // Simulate processing
+
+            CharacterCount = InputText.Length;
+            CharacterCountNoSpaces = InputText.Replace(" ", "").Length;
+            WordCount = string.IsNullOrWhiteSpace(InputText) ? 0 : InputText.Split(new[] { ' ', '\t', '\n' }, StringSplitOptions.RemoveEmptyEntries).Length;
+            SentenceCount = string.IsNullOrWhiteSpace(InputText) ? 0 : InputText.Split(new[] { '.', '!', '?' }, StringSplitOptions.RemoveEmptyEntries).Length;
+
+            if (CharacterCount == 0)
+            {
+                ShowToast(false, "No valid text detected.");
+            }
+        }
+        catch (Exception ex)
+        {
+            ShowToast(false, $"Error: {ex.Message}");
+        }
+        finally
+        {
+            _isProcessing = false;
+        }
+    }
+
+    private async Task CopyToClipboard()
+    {
+        if (CharacterCount == 0) return;
+
+        _isCopying = true;
+        try
+        {
+            string resultText = $"Character Count (with spaces): {CharacterCount}\nCharacter Count (without spaces): {CharacterCountNoSpaces}\nWord Count: {WordCount}\nSentence Count: {SentenceCount}";
+            await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", resultText);
+            ShowToast(true, "Results copied to clipboard!");
+        }
+        catch (Exception ex)
+        {
+            ShowToast(false, $"Failed to copy: {ex.Message}");
+        }
+        finally
+        {
+            _isCopying = false;
+        }
+    }
+
+    private async Task ShowToast(bool success, string message)
+    {
+        _toastSuccess = success;
+        _toastMessage = message;
+        _showToast = true;
+        StateHasChanged();
+        await Task.Delay(3000);
+        _showToast = false;
+        StateHasChanged();
+    }
+}

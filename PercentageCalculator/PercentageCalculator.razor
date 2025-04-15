@@ -1,0 +1,300 @@
+﻿@using it_tools.ToolDevelopment.Base
+@using it_tools.ToolDevelopment.Attributes
+@using Microsoft.JSInterop
+@using System.ComponentModel.DataAnnotations
+@inject IJSRuntime JSRuntime
+@inherits ToolComponentBase
+
+<div class="p-6 bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen">
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-8 animate-fade-in">
+        <div>
+            <h2 class="text-3xl font-extrabold text-gray-900 tracking-tight">@Name</h2>
+            <p class="text-gray-600 mt-1">@Description</p>
+        </div>
+    </div>
+
+    <!-- Form -->
+    <div class="bg-white p-6 rounded-2xl shadow-xl mb-6 animate-slide-in">
+        <div class="space-y-6">
+            <!-- Calculation Type -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Calculation Type:</label>
+                <select @bind="CalculationType" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 h-12">
+                    <option value="FindPercentage">What is X% of Y?</option>
+                    <option value="PercentageChange">Percentage change from X to Y</option>
+                    <option value="FindOriginal">X is Y% of what number?</option>
+                </select>
+            </div>
+
+            <!-- Form inputs -->
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                @if (CalculationType == "FindPercentage")
+                {
+                    <!-- X% -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Percentage (X%):</label>
+                        <input type="number" @bind="Value1" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 h-12" placeholder="Enter percentage" />
+                        @if (Value1 <= 0 && HasSubmitted)
+                        {
+                            <p class="text-red-500 text-xs mt-1">Percentage must be greater than 0.</p>
+                        }
+                    </div>
+                    <!-- of Y -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Number (Y):</label>
+                        <input type="number" @bind="Value2" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 h-12" placeholder="Enter number" />
+                        @if (Value2 == 0 && HasSubmitted)
+                        {
+                            <p class="text-red-500 text-xs mt-1">Number cannot be 0.</p>
+                        }
+                    </div>
+                }
+                else if (CalculationType == "PercentageChange")
+                {
+                    <!-- From X -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">From (X):</label>
+                        <input type="number" @bind="Value1" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 h-12" placeholder="Enter starting value" />
+                        @if (Value1 == 0 && HasSubmitted)
+                        {
+                            <p class="text-red-500 text-xs mt-1">Starting value cannot be 0.</p>
+                        }
+                    </div>
+                    <!-- To Y -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">To (Y):</label>
+                        <input type="number" @bind="Value2" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 h-12" placeholder="Enter ending value" />
+                    </div>
+                }
+                else if (CalculationType == "FindOriginal")
+                {
+                    <!-- X -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Value (X):</label>
+                        <input type="number" @bind="Value1" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 h-12" placeholder="Enter value" />
+                        @if (Value1 == 0 && HasSubmitted)
+                        {
+                            <p class="text-red-500 text-xs mt-1">Value cannot be 0.</p>
+                        }
+                    </div>
+                    <!-- Y% -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Percentage (Y%):</label>
+                        <input type="number" @bind="Value2" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 h-12" placeholder="Enter percentage" />
+                        @if (Value2 <= 0 && HasSubmitted)
+                        {
+                            <p class="text-red-500 text-xs mt-1">Percentage must be greater than 0.</p>
+                        }
+                    </div>
+                }
+            </div>
+
+            <!-- Calculate button -->
+            <div class="text-center">
+                <button @onclick="ComputePercentage" disabled="@_isProcessing" class="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 h-12">
+                    @if (_isProcessing)
+                    {
+                        <span>Calculating...</span>
+                    }
+                    else
+                    {
+                        <span>Calculate</span>
+                    }
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Results -->
+    @if (!string.IsNullOrEmpty(Result))
+    {
+        <div class="bg-white p-6 rounded-2xl shadow-xl animate-slide-in">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-xl font-semibold text-gray-800">Result</h3>
+                <button @onclick="CopyToClipboard" disabled="@_isCopying" class="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all duration-200 shadow-md">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                    @if (_isCopying)
+                    {
+                        <span>Copying...</span>
+                    }
+                    else
+                    {
+                        <span>Copy Result</span>
+                    }
+                </button>
+            </div>
+            <div class="space-y-2">
+                <p><strong>Result:</strong> <span class="text-blue-600 font-semibold">@Result</span></p>
+            </div>
+        </div>
+    }
+    else if (HasSubmitted && (Value1 == 0 || (CalculationType != "PercentageChange" && Value2 == 0)))
+    {
+        <div class="bg-white p-6 rounded-2xl shadow-xl animate-slide-in">
+            <div class="text-center">
+                <p class="text-red-600">Please enter valid information to calculate.</p>
+            </div>
+        </div>
+    }
+</div>
+
+<!-- Toast Notification -->
+@if (_showToast)
+{
+    <div class="fixed bottom-6 right-6 z-50 animate-toast-in">
+        <div class="flex items-center bg-@(_toastSuccess ? "green" : "red")-500 text-white px-4 py-3 rounded-lg shadow-lg">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="@(_toastSuccess ? "M5 13l4 4L19 7" : "M6 18L18 6M6 6l12 12")" />
+            </svg>
+            <span>@_toastMessage</span>
+        </div>
+    </div>
+}
+
+<style>
+    /* Custom Animations */
+    @@keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+
+    @@keyframes slideIn {
+        from { transform: translateY(-20px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+    }
+
+    @@keyframes toastIn {
+        from { transform: translateY(20px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+    }
+
+    @@keyframes toastOut {
+        from { transform: translateY(0); opacity: 1; }
+        to { transform: translateY(20px); opacity: 0; }
+    }
+
+    .animate-fade-in {
+        animation: fadeIn 0.5s ease-in-out;
+    }
+
+    .animate-slide-in {
+        animation: slideIn 0.5s ease-in-out;
+    }
+
+    .animate-toast-in {
+        animation: toastIn 0.3s ease-in-out;
+    }
+
+    .animate-toast-out {
+        animation: toastOut 0.3s ease-in-out forwards;
+    }
+</style>
+
+@code {
+    private string CalculationType { get; set; } = "FindPercentage";
+    private double Value1 { get; set; }
+    private double Value2 { get; set; }
+    private string Result { get; set; } = "";
+    private bool HasSubmitted { get; set; }
+    private bool _isProcessing = false;
+    private bool _isCopying = false;
+    private bool _showToast = false;
+    private bool _toastSuccess = false;
+    private string _toastMessage = "";
+
+    // Metadata for the tool
+    public override string Name => "Percentage Calculator";
+    public override string Description => "Calculate percentages, percentage changes, or find the original number from a percentage.";
+    public override string Slug => "percentage-calculator";
+    public override string Group => "Math Tools";
+    public override string Icon => "📊";
+
+    private async Task ComputePercentage()
+    {
+        HasSubmitted = true;
+        Result = "";
+
+        // Validate inputs
+        if (CalculationType == "FindPercentage" && (Value1 <= 0 || Value2 == 0))
+        {
+            ShowToast(false, "Please enter valid information.");
+            return;
+        }
+        else if (CalculationType == "PercentageChange" && Value1 == 0)
+        {
+            ShowToast(false, "Starting value cannot be 0.");
+            return;
+        }
+        else if (CalculationType == "FindOriginal" && (Value1 == 0 || Value2 <= 0))
+        {
+            ShowToast(false, "Please enter valid information.");
+            return;
+        }
+
+        _isProcessing = true;
+        try
+        {
+            // Simulate processing delay
+            await Task.Delay(500);
+
+            if (CalculationType == "FindPercentage")
+            {
+                // What is X% of Y?
+                double result = (Value1 / 100) * Value2;
+                Result = $"{Value1}% of {Value2} is {result:N2}";
+            }
+            else if (CalculationType == "PercentageChange")
+            {
+                // Percentage change from X to Y
+                double change = ((Value2 - Value1) / Value1) * 100;
+                Result = $"Percentage change from {Value1} to {Value2} is {change:N2}%";
+            }
+            else if (CalculationType == "FindOriginal")
+            {
+                // X is Y% of what number?
+                double original = (Value1 / Value2) * 100;
+                Result = $"{Value1} is {Value2}% of {original:N2}";
+            }
+        }
+        catch (Exception ex)
+        {
+            ShowToast(false, $"Error: {ex.Message}");
+        }
+        finally
+        {
+            _isProcessing = false;
+        }
+    }
+
+    private async Task CopyToClipboard()
+    {
+        if (string.IsNullOrEmpty(Result)) return;
+
+        _isCopying = true;
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", Result);
+            ShowToast(true, "Result copied to clipboard!");
+        }
+        catch (Exception ex)
+        {
+            ShowToast(false, $"Failed to copy: {ex.Message}");
+        }
+        finally
+        {
+            _isCopying = false;
+        }
+    }
+
+    private async void ShowToast(bool success, string message)
+    {
+        _toastSuccess = success;
+        _toastMessage = message;
+        _showToast = true;
+        await Task.Delay(3000);
+        _showToast = false;
+    }
+}

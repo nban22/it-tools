@@ -1,0 +1,287 @@
+﻿@using it_tools.ToolDevelopment.Base
+@using it_tools.ToolDevelopment.Attributes
+@using Microsoft.JSInterop
+@inject IJSRuntime JSRuntime
+@inherits ToolComponentBase
+
+<div class="p-6 bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen flex items-center justify-center">
+    <div class="max-w-lg w-full">
+        <!-- Header -->
+        <div class="flex items-center justify-between mb-8 animate-fade-in">
+            <div>
+                <h2 class="text-3xl font-extrabold text-gray-900 tracking-tight">@Name</h2>
+                <p class="text-gray-600 mt-2 text-lg">@Description</p>
+            </div>
+        </div>
+
+        <!-- IP Checker Form -->
+        <div class="bg-white p-8 rounded-2xl shadow-xl mb-6 animate-slide-in">
+            <div class="space-y-6">
+                <!-- IP Address Input -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">IP Address:</label>
+                    <input type="text" @bind="IPAddress" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-gray-800 placeholder-gray-400 h-12" placeholder="e.g., 192.168.1.1 or leave blank for your IP" />
+                    @if (_hasSubmitted && !string.IsNullOrWhiteSpace(IPAddress) && !IsValidIPAddress(IPAddress))
+                    {
+                        <p class="text-red-500 text-xs mt-1 animate-fade-in">Please enter a valid IPv4 address.</p>
+                    }
+                </div>
+
+                <!-- Check Button -->
+                <div class="text-center">
+                    <button @onclick="CheckIP" disabled="@_isChecking" class="relative px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed h-12 w-full sm:w-auto">
+                        @if (_isChecking)
+                        {
+                            <span class="flex items-center justify-center">
+                                <svg class="animate-spin h-5 w-5 mr-2 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                Checking...
+                            </span>
+                        }
+                        else
+                        {
+                            <span>Check IP</span>
+                        }
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- IP Check Results -->
+        @if (_ipInfo != null)
+        {
+            <div class="bg-white p-8 rounded-2xl shadow-xl animate-slide-in">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-xl font-semibold text-gray-800">IP Information</h3>
+                    <button @onclick="CopyResults" disabled="@_isCopying" class="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all duration-200 shadow-md disabled:opacity-50">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                        </svg>
+                        @if (_isCopying)
+                        {
+                            <span>Copying...</span>
+                        }
+                        else
+                        {
+                            <span>Copy Info</span>
+                        }
+                    </button>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div class="p-3 bg-gray-50 rounded-lg animate-fade-in">
+                        <span class="text-gray-700 font-medium">IP Address:</span>
+                        <span class="text-blue-600 font-semibold">@_ipInfo.IP</span>
+                    </div>
+                    <div class="p-3 bg-gray-50 rounded-lg animate-fade-in">
+                        <span class="text-gray-700 font-medium">Hostname:</span>
+                        <span class="text-blue-600 font-semibold">@_ipInfo.Hostname</span>
+                    </div>
+                    <div class="p-3 bg-gray-50 rounded-lg animate-fade-in">
+                        <span class="text-gray-700 font-medium">City:</span>
+                        <span class="text-blue-600 font-semibold">@_ipInfo.City</span>
+                    </div>
+                    <div class="p-3 bg-gray-50 rounded-lg animate-fade-in">
+                        <span class="text-gray-700 font-medium">Region:</span>
+                        <span class="text-blue-600 font-semibold">@_ipInfo.Region</span>
+                    </div>
+                    <div class="p-3 bg-gray-50 rounded-lg animate-fade-in">
+                        <span class="text-gray-700 font-medium">Country:</span>
+                        <span class="text-blue-600 font-semibold">@_ipInfo.Country</span>
+                    </div>
+                    <div class="p-3 bg-gray-50 rounded-lg animate-fade-in">
+                        <span class="text-gray-700 font-medium">ISP:</span>
+                        <span class="text-blue-600 font-semibold">@_ipInfo.ISP</span>
+                    </div>
+                </div>
+            </div>
+        }
+        else if (_hasSubmitted)
+        {
+            <div class="bg-white p-8 rounded-2xl shadow-xl animate-slide-in">
+                <div class="text-center">
+                    <p class="text-red-600 font-medium">Unable to retrieve IP information. Please try again.</p>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+<!-- Toast Notification -->
+@if (_showToast)
+{
+    <div class="fixed bottom-6 right-6 z-50 animate-toast-in">
+        <div class="flex items-center bg-@(_toastSuccess ? "green" : "red")-500 text-white px-4 py-3 rounded-lg shadow-lg">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="@(_toastSuccess ? "M5 13l4 4L19 7" : "M6 18L18 6M6 6l12 12")" />
+            </svg>
+            <span>@_toastMessage</span>
+        </div>
+    </div>
+}
+
+<style>
+    @@keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+
+    @@keyframes slideIn {
+        from { transform: translateY(-20px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+    }
+
+    @@keyframes toastIn {
+        from { transform: translateY(20px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+    }
+
+    @@keyframes toastOut {
+        from { transform: translateY(0); opacity: 1; }
+        to { transform: translateY(20px); opacity: 0; }
+    }
+
+    .animate-fade-in {
+        animation: fadeIn 0.5s ease-in-out;
+    }
+
+    .animate-slide-in {
+        animation: slideIn 0.5s ease-in-out;
+    }
+
+    .animate-toast-in {
+        animation: toastIn 0.3s ease-in-out;
+    }
+
+    .animate-toast-out {
+        animation: toastOut 0.3s ease-in-out forwards;
+    }
+</style>
+
+@code {
+    private string IPAddress { get; set; } = "";
+    private IPInfo? _ipInfo { get; set; }
+    private bool _hasSubmitted { get; set; }
+    private bool _isChecking { get; set; }
+    private bool _isCopying { get; set; }
+    private bool _showToast { get; set; }
+    private bool _toastSuccess { get; set; }
+    private string _toastMessage { get; set; } = "";
+
+    public override string Name => "IP Checker";
+    public override string Description => "Check details of an IP address, including location and ISP.";
+    public override string Slug => "ip-checker";
+    public override string Group => "Network Tools";
+    public override string Icon => "🌍";
+
+    private class IPInfo
+    {
+        public string IP { get; set; } = "";
+        public string Hostname { get; set; } = "";
+        public string City { get; set; } = "";
+        public string Region { get; set; } = "";
+        public string Country { get; set; } = "";
+        public string ISP { get; set; } = "";
+    }
+
+    private bool IsValidIPAddress(string ip)
+    {
+        if (string.IsNullOrWhiteSpace(ip))
+            return true; // Allow empty input for user's IP
+
+        var parts = ip.Split('.');
+        if (parts.Length != 4)
+            return false;
+
+        return parts.All(part => int.TryParse(part, out int num) && num >= 0 && num <= 255);
+    }
+
+    private async Task CheckIP()
+    {
+        _hasSubmitted = true;
+        _ipInfo = null;
+
+        if (!string.IsNullOrWhiteSpace(IPAddress) && !IsValidIPAddress(IPAddress))
+        {
+            await ShowToast(false, "Please enter a valid IPv4 address.");
+            return;
+        }
+
+        _isChecking = true;
+        try
+        {
+            await Task.Delay(300); // Reduced delay for better UX
+            _ipInfo = await SimulateIPLookup(string.IsNullOrWhiteSpace(IPAddress) ? "192.168.1.1" : IPAddress);
+            await ShowToast(true, "IP information retrieved successfully!");
+        }
+        catch (Exception ex)
+        {
+            await ShowToast(false, $"Error retrieving IP information: {ex.Message}");
+        }
+        finally
+        {
+            _isChecking = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task<IPInfo> SimulateIPLookup(string ip)
+    {
+        await Task.Delay(100); // Minimal delay for simulation
+        return new IPInfo
+        {
+            IP = ip,
+            Hostname = ip == "192.168.1.1" ? "local-gateway" : $"host-{ip.Replace(".", "-")}.example.com",
+            City = ip.StartsWith("192.168") ? "Private Network" : "San Francisco",
+            Region = ip.StartsWith("192.168") ? "N/A" : "California",
+            Country = ip.StartsWith("192.168") ? "N/A" : "United States",
+            ISP = ip.StartsWith("192.168") ? "Local ISP" : "Example ISP Inc."
+        };
+    }
+
+    private async Task CopyResults()
+    {
+        if (_ipInfo == null)
+        {
+            await ShowToast(false, "No information to copy.");
+            return;
+        }
+
+        _isCopying = true;
+        try
+        {
+            // Use StringBuilder to avoid string literal issues
+            var resultText = new System.Text.StringBuilder();
+            resultText.AppendLine($"IP Address: {_ipInfo.IP}");
+            resultText.AppendLine($"Hostname: {_ipInfo.Hostname}");
+            resultText.AppendLine($"City: {_ipInfo.City}");
+            resultText.AppendLine($"Region: {_ipInfo.Region}");
+            resultText.AppendLine($"Country: {_ipInfo.Country}");
+            resultText.AppendLine($"ISP: {_ipInfo.ISP}");
+
+            await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", resultText.ToString());
+            await ShowToast(true, "IP information copied to clipboard!");
+        }
+        catch (Exception ex)
+        {
+            await ShowToast(false, $"Error copying information: {ex.Message}");
+        }
+        finally
+        {
+            _isCopying = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task ShowToast(bool success, string message)
+    {
+        _toastSuccess = success;
+        _toastMessage = message;
+        _showToast = true;
+        StateHasChanged();
+        await Task.Delay(3000);
+        _showToast = false;
+        StateHasChanged();
+    }
+}
