@@ -1,0 +1,376 @@
+﻿@using it_tools.ToolDevelopment.Base
+@using it_tools.ToolDevelopment.Attributes
+@using System.Text
+@using System.Collections.Generic
+@using System.Globalization
+@attribute [ToolComponentAttribute(true)]
+@inherits ToolComponentBase
+
+<div class="p-6 bg-white rounded-lg shadow-lg">
+    <div class="flex items-center mb-6">
+        <div class="mr-3 bg-indigo-100 p-2 rounded-lg">
+            <span class="text-2xl">@Icon</span>
+        </div>
+        <div>
+            <h2 class="text-2xl font-bold text-gray-800">@Name</h2>
+            <p class="text-gray-600">@Description</p>
+        </div>
+    </div>
+    
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- Input Panel -->
+        <div class="bg-gray-50 p-5 rounded-lg border border-gray-200">
+            <h3 class="text-lg font-semibold text-gray-700 mb-4">Input Text</h3>
+            
+            <div class="space-y-4">
+                <div>
+                    <textarea 
+                        @bind="_inputText" 
+                        class="w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 h-40"
+                        placeholder="Enter text to convert..."></textarea>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Conversion Type</label>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="flex items-center p-3 rounded-md border border-gray-200 @(_selectedConversion == "uppercase" ? "bg-indigo-50 border-indigo-300" : "bg-white")" @onclick="@(() => _selectedConversion = "uppercase")">
+                            <div class="text-xl mr-2 @(_selectedConversion == "uppercase" ? "text-indigo-500" : "text-gray-500")">Aa</div>
+                            <span class="text-sm font-medium @(_selectedConversion == "uppercase" ? "text-indigo-700" : "text-gray-700")">UPPERCASE</span>
+                        </div>
+                        <div class="flex items-center p-3 rounded-md border border-gray-200 @(_selectedConversion == "lowercase" ? "bg-indigo-50 border-indigo-300" : "bg-white")" @onclick="@(() => _selectedConversion = "lowercase")">
+                            <div class="text-xl mr-2 @(_selectedConversion == "lowercase" ? "text-indigo-500" : "text-gray-500")">Aa</div>
+                            <span class="text-sm font-medium @(_selectedConversion == "lowercase" ? "text-indigo-700" : "text-gray-700")">lowercase</span>
+                        </div>
+                        <div class="flex items-center p-3 rounded-md border border-gray-200 @(_selectedConversion == "titlecase" ? "bg-indigo-50 border-indigo-300" : "bg-white")" @onclick="@(() => _selectedConversion = "titlecase")">
+                            <div class="text-xl mr-2 @(_selectedConversion == "titlecase" ? "text-indigo-500" : "text-gray-500")">Aa</div>
+                            <span class="text-sm font-medium @(_selectedConversion == "titlecase" ? "text-indigo-700" : "text-gray-700")">Title Case</span>
+                        </div>
+                        <div class="flex items-center p-3 rounded-md border border-gray-200 @(_selectedConversion == "sentencecase" ? "bg-indigo-50 border-indigo-300" : "bg-white")" @onclick="@(() => _selectedConversion = "sentencecase")">
+                            <div class="text-xl mr-2 @(_selectedConversion == "sentencecase" ? "text-indigo-500" : "text-gray-500")">Aa</div>
+                            <span class="text-sm font-medium @(_selectedConversion == "sentencecase" ? "text-indigo-700" : "text-gray-700")">Sentence case</span>
+                        </div>
+                        <div class="flex items-center p-3 rounded-md border border-gray-200 @(_selectedConversion == "capitalize" ? "bg-indigo-50 border-indigo-300" : "bg-white")" @onclick="@(() => _selectedConversion = "capitalize")">
+                            <div class="text-xl mr-2 @(_selectedConversion == "capitalize" ? "text-indigo-500" : "text-gray-500")">Aa</div>
+                            <span class="text-sm font-medium @(_selectedConversion == "capitalize" ? "text-indigo-700" : "text-gray-700")">Capitalize Words</span>
+                        </div>
+                        <div class="flex items-center p-3 rounded-md border border-gray-200 @(_selectedConversion == "toggle" ? "bg-indigo-50 border-indigo-300" : "bg-white")" @onclick="@(() => _selectedConversion = "toggle")">
+                            <div class="text-xl mr-2 @(_selectedConversion == "toggle" ? "text-indigo-500" : "text-gray-500")">Aa</div>
+                            <span class="text-sm font-medium @(_selectedConversion == "toggle" ? "text-indigo-700" : "text-gray-700")">tOGGLE cASE</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Additional Options</label>
+                    <div class="space-y-2">
+                        <div class="flex items-center">
+                            <input type="checkbox" id="trimWhitespace" @bind="_trimWhitespace" class="mr-2 h-4 w-4 text-indigo-600 focus:ring-indigo-500 rounded" />
+                            <label for="trimWhitespace" class="text-sm text-gray-700">Trim whitespace</label>
+                        </div>
+                        
+                        <div class="flex items-center">
+                            <input type="checkbox" id="removeExtraSpaces" @bind="_removeExtraSpaces" class="mr-2 h-4 w-4 text-indigo-600 focus:ring-indigo-500 rounded" />
+                            <label for="removeExtraSpaces" class="text-sm text-gray-700">Remove extra spaces</label>
+                        </div>
+                    </div>
+                </div>
+                
+                <button @onclick="ConvertText" class="w-full px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-md shadow-sm transition duration-150 ease-in-out">
+                    Convert
+                </button>
+            </div>
+        </div>
+        
+        <!-- Output Panel -->
+        <div class="bg-gray-50 p-5 rounded-lg border border-gray-200">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold text-gray-700">Converted Text</h3>
+                @if (!string.IsNullOrEmpty(_outputText))
+                {
+                    <div class="flex space-x-2">
+                        <button @onclick="CopyToClipboard" class="px-3 py-1 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-md text-sm flex items-center transition duration-150 ease-in-out">
+                            <span>Copy</span>
+                        </button>
+                        <button @onclick="ClearOutput" class="px-3 py-1 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-md text-sm flex items-center transition duration-150 ease-in-out">
+                            <span>Clear</span>
+                        </button>
+                    </div>
+                }
+            </div>
+            
+            <div class="h-40 overflow-auto border border-gray-200 rounded-md bg-white p-3">
+                @if (!string.IsNullOrEmpty(_outputText))
+                {
+                    <pre class="text-sm whitespace-pre-wrap text-gray-800">@_outputText</pre>
+                }
+                else
+                {
+                    <div class="h-full flex items-center justify-center text-gray-400">
+                        <p>Converted text will appear here</p>
+                    </div>
+                }
+            </div>
+            
+            @if (!string.IsNullOrEmpty(_statusMessage))
+            {
+                <div class="mt-2 @(_isError ? "text-red-600" : "text-green-600") text-sm">
+                    @_statusMessage
+                </div>
+            }
+            
+            <div class="mt-4">
+                <div class="flex items-center justify-between text-gray-500 text-sm">
+                    <div>
+                        <span>Character count: @(_outputText?.Length ?? 0)</span>
+                        <span class="mx-2">•</span>
+                        <span>Word count: @(CountWords(_outputText))</span>
+                    </div>
+                    <div>
+                        <span>@GetCaseLabel()</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mt-6">
+                <h4 class="text-md font-medium text-gray-700 mb-2">Text Analysis</h4>
+                <div class="grid grid-cols-2 gap-2">
+                    <div class="p-2 bg-gray-100 rounded text-sm flex justify-between">
+                        <span>Uppercase letters:</span>
+                        <span class="font-medium">@(CountUppercase(_outputText))</span>
+                    </div>
+                    <div class="p-2 bg-gray-100 rounded text-sm flex justify-between">
+                        <span>Lowercase letters:</span>
+                        <span class="font-medium">@(CountLowercase(_outputText))</span>
+                    </div>
+                    <div class="p-2 bg-gray-100 rounded text-sm flex justify-between">
+                        <span>Numbers:</span>
+                        <span class="font-medium">@(CountNumbers(_outputText))</span>
+                    </div>
+                    <div class="p-2 bg-gray-100 rounded text-sm flex justify-between">
+                        <span>Special chars:</span>
+                        <span class="font-medium">@(CountSpecialChars(_outputText))</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private string _inputText = "";
+    private string _outputText = "";
+    private string _statusMessage = "";
+    private bool _isError = false;
+    private string _selectedConversion = "uppercase";
+    private bool _trimWhitespace = false;
+    private bool _removeExtraSpaces = false;
+
+    // Implement required properties from ToolComponentBase
+    public override string Name => "Text Case Converter";
+    public override string Description => "Convert text between different cases and formats";
+    public override string Group => "String Processing Tools";
+    public override string Icon => "🔠";
+    
+    private void CopyToClipboard()
+    {
+        try
+        {
+            _statusMessage = "Copied to clipboard!";
+            _isError = false;
+            // Note: Actual clipboard functionality must be implemented client-side with JS interop
+        }
+        catch (Exception ex)
+        {
+            _statusMessage = $"Error copying to clipboard: {ex.Message}";
+            _isError = true;
+        }
+    }
+    
+    private void ClearOutput()
+    {
+        _outputText = "";
+        _statusMessage = "";
+    }
+    
+    private int CountWords(string text)
+    {
+        if (string.IsNullOrEmpty(text))
+            return 0;
+            
+        // Split by whitespace and count non-empty parts
+        return text?.Split(new[] { ' ', '\n', '\r', '\t' }, StringSplitOptions.RemoveEmptyEntries).Length ?? 0;
+    }
+    
+    private int CountUppercase(string text)
+    {
+        if (string.IsNullOrEmpty(text))
+            return 0;
+            
+        return text.Count(char.IsUpper);
+    }
+    
+    private int CountLowercase(string text)
+    {
+        if (string.IsNullOrEmpty(text))
+            return 0;
+            
+        return text.Count(char.IsLower);
+    }
+    
+    private int CountNumbers(string text)
+    {
+        if (string.IsNullOrEmpty(text))
+            return 0;
+            
+        return text.Count(char.IsDigit);
+    }
+    
+    private int CountSpecialChars(string text)
+    {
+        if (string.IsNullOrEmpty(text))
+            return 0;
+            
+        return text.Count(c => !char.IsLetterOrDigit(c) && !char.IsWhiteSpace(c));
+    }
+    
+    private string GetCaseLabel()
+    {
+        switch (_selectedConversion)
+        {
+            case "uppercase": return "UPPERCASE";
+            case "lowercase": return "lowercase";
+            case "titlecase": return "Title Case";
+            case "sentencecase": return "Sentence case";
+            case "capitalize": return "Capitalize Words";
+            case "toggle": return "tOGGLE cASE";
+            default: return "";
+        }
+    }
+    
+    private void ConvertText()
+    {
+        try
+        {
+            _statusMessage = "";
+            _isError = false;
+            
+            if (string.IsNullOrEmpty(_inputText))
+            {
+                _statusMessage = "Please enter some text to convert";
+                _isError = true;
+                return;
+            }
+            
+            string result = _inputText;
+            
+            // Apply pre-processing options
+            if (_trimWhitespace)
+            {
+                result = result.Trim();
+            }
+            
+            if (_removeExtraSpaces)
+            {
+                result = System.Text.RegularExpressions.Regex.Replace(result, @"\s+", " ");
+            }
+            
+            // Apply case conversion
+            switch (_selectedConversion)
+            {
+                case "uppercase":
+                    result = result.ToUpper();
+                    break;
+                case "lowercase":
+                    result = result.ToLower();
+                    break;
+                case "titlecase":
+                    result = ConvertToTitleCase(result);
+                    break;
+                case "sentencecase":
+                    result = ConvertToSentenceCase(result);
+                    break;
+                case "capitalize":
+                    result = ConvertToCapitalizeWords(result);
+                    break;
+                case "toggle":
+                    result = ToggleCase(result);
+                    break;
+            }
+            
+            _outputText = result;
+            _statusMessage = "Text converted successfully!";
+        }
+        catch (Exception ex)
+        {
+            _statusMessage = $"Error converting text: {ex.Message}";
+            _isError = true;
+        }
+    }
+    
+    private string ConvertToTitleCase(string text)
+    {
+        // Convert to title case using TextInfo
+        TextInfo textInfo = new CultureInfo("en-US", false).TextInfo;
+        return textInfo.ToTitleCase(text.ToLower());
+    }
+    
+    private string ConvertToSentenceCase(string text)
+    {
+        if (string.IsNullOrEmpty(text))
+            return text;
+            
+        // Split the text into sentences
+        string[] sentences = System.Text.RegularExpressions.Regex.Split(text, @"(?<=[.!?])\s+");
+        
+        for (int i = 0; i < sentences.Length; i++)
+        {
+            if (!string.IsNullOrEmpty(sentences[i]))
+            {
+                // Convert first character to uppercase and the rest to lowercase
+                sentences[i] = char.ToUpper(sentences[i][0]) + sentences[i].Substring(1).ToLower();
+            }
+        }
+        
+        return string.Join(" ", sentences);
+    }
+    
+    private string ConvertToCapitalizeWords(string text)
+    {
+        if (string.IsNullOrEmpty(text))
+            return text;
+            
+        // Split the text into words
+        string[] words = text.Split(' ');
+        
+        for (int i = 0; i < words.Length; i++)
+        {
+            if (!string.IsNullOrEmpty(words[i]))
+            {
+                // Convert first character to uppercase, leave the rest unchanged
+                words[i] = char.ToUpper(words[i][0]) + words[i].Substring(1);
+            }
+        }
+        
+        return string.Join(" ", words);
+    }
+    
+    private string ToggleCase(string text)
+    {
+        if (string.IsNullOrEmpty(text))
+            return text;
+            
+        StringBuilder result = new StringBuilder(text.Length);
+        
+        foreach (char c in text)
+        {
+            if (char.IsUpper(c))
+                result.Append(char.ToLower(c));
+            else if (char.IsLower(c))
+                result.Append(char.ToUpper(c));
+            else
+                result.Append(c);
+        }
+        
+        return result.ToString();
+    }
+}
