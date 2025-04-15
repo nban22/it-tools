@@ -1,0 +1,261 @@
+﻿@using it_tools.ToolDevelopment.Base
+@using it_tools.ToolDevelopment.Attributes
+@using System.Net.Http
+@using System.Text.Json
+@using System.Text.RegularExpressions
+@attribute [ToolComponentAttribute(true)]
+@inherits ToolComponentBase
+
+<div class="p-6 bg-white rounded-lg shadow-lg">
+    <div class="flex items-center mb-6">
+        <span class="text-2xl mr-2">🔍</span>
+        <h2 class="text-2xl font-bold">@Name</h2>
+    </div>
+    <p class="text-gray-600 mb-6">@Description</p>
+    
+    <div class="space-y-6">
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">URL to Analyze:</label>
+            <div class="flex">
+                <input type="text" @bind="_url" placeholder="https://example.com" 
+                       class="flex-1 px-4 py-2 border border-gray-300 rounded-l-md focus:ring-blue-500 focus:border-blue-500" />
+                <button @onclick="AnalyzeHeaders" class="px-4 py-2 bg-blue-600 text-white rounded-r-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                    Analyze
+                </button>
+            </div>
+            @if (!string.IsNullOrEmpty(_errorMessage))
+            {
+                <div class="mt-2 text-red-600 text-sm">@_errorMessage</div>
+            }
+        </div>
+        
+        @if (_isLoading)
+        {
+            <div class="flex justify-center py-4">
+                <div class="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-500"></div>
+            </div>
+        }
+        
+        @if (_headers != null && _headers.Count > 0)
+        {
+            <div class="mt-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-semibold">Headers Analysis</h3>
+                    <div class="flex space-x-2">
+                        <button @onclick="CopyHeadersToClipboard" class="px-3 py-1 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 text-sm flex items-center">
+                            <span class="mr-1">📋</span> Copy
+                        </button>
+                        <button @onclick="ClearResults" class="px-3 py-1 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 text-sm flex items-center">
+                            <span class="mr-1">🗑️</span> Clear
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="overflow-hidden border border-gray-200 rounded-lg">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Header</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Value</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            @foreach (var header in _headers)
+                            {
+                                <tr class="hover:bg-gray-50">
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">@header.Key</td>
+                                    <td class="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">@header.Value</td>
+                                    <td class="px-6 py-4 text-sm text-gray-500">@GetHeaderDescription(header.Key)</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            @if (_securityHeaders?.Count > 0)
+            {
+                <div class="mt-8">
+                    <h3 class="text-lg font-semibold mb-4">Security Headers Analysis</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        @foreach (var header in _securityHeaders)
+                        {
+                            <div class="border rounded-lg p-4 @(header.IsPresent ? "bg-green-50 border-green-200" : "bg-red-50 border-red-200")">
+                                <div class="flex items-center mb-2">
+                                    <span class="mr-2">@(header.IsPresent ? "✅" : "❌")</span>
+                                    <h4 class="font-medium">@header.Name</h4>
+                                </div>
+                                <p class="text-sm text-gray-600">@header.Description</p>
+                                @if (header.IsPresent && !string.IsNullOrEmpty(header.Value))
+                                {
+                                    <div class="mt-2 text-sm bg-white p-2 rounded border border-gray-200">
+                                        <code class="break-all">@header.Value</code>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+        }
+    </div>
+</div>
+
+@code {
+    private string _url = "";
+    private Dictionary<string, string> _headers = new();
+    private List<SecurityHeader> _securityHeaders = new();
+    private string _errorMessage = "";
+    private bool _isLoading = false;
+    private HttpClient _httpClient;
+    
+    // Implement required properties from ToolComponentBase
+    public override string Name => "HTTP Header Analyzer";
+    public override string Description => "Analyze HTTP headers from any URL including security headers assessment";
+    public override string Group => "Web Tools";
+    public override string Icon => "🔍";
+    
+    protected override void OnInitialized()
+    {
+        _httpClient = new HttpClient(new HttpClientHandler
+        {
+            AllowAutoRedirect = true,
+            AutomaticDecompression = System.Net.DecompressionMethods.All
+        });
+        _httpClient.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 HTTP Header Analyzer Tool");
+    }
+    
+    private class SecurityHeader
+    {
+        public string Name { get; set; }
+        public string Description { get; set; }
+        public bool IsPresent { get; set; }
+        public string Value { get; set; }
+    }
+    
+    private async Task AnalyzeHeaders()
+    {
+        if (string.IsNullOrWhiteSpace(_url))
+        {
+            _errorMessage = "Please enter a valid URL";
+            return;
+        }
+
+        if (!_url.StartsWith("http://") && !_url.StartsWith("https://"))
+        {
+            _url = "https://" + _url;
+        }
+        
+        _errorMessage = "";
+        _isLoading = true;
+        _headers.Clear();
+        _securityHeaders.Clear();
+        
+        try
+        {
+            var request = new HttpRequestMessage(HttpMethod.Head, _url);
+            var response = await _httpClient.SendAsync(request);
+            
+            foreach (var header in response.Headers)
+            {
+                _headers[header.Key] = string.Join(", ", header.Value);
+            }
+            
+            foreach (var header in response.Content.Headers)
+            {
+                _headers[header.Key] = string.Join(", ", header.Value);
+            }
+            
+            _headers["Status-Code"] = ((int)response.StatusCode).ToString() + " " + response.StatusCode.ToString();
+            
+            AnalyzeSecurityHeaders();
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            _isLoading = false;
+            StateHasChanged();
+        }
+    }
+    
+    private void AnalyzeSecurityHeaders()
+    {
+        var securityHeadersList = new List<(string Name, string Description)>
+        {
+            ("Strict-Transport-Security", "Enforces secure (HTTPS) connections to the server"),
+            ("Content-Security-Policy", "Controls resources the user agent is allowed to load"),
+            ("X-Content-Type-Options", "Prevents browsers from MIME-sniffing a response from the declared content-type"),
+            ("X-Frame-Options", "Provides clickjacking protection by not allowing the browser to render the page in a frame"),
+            ("X-XSS-Protection", "Enables cross-site scripting filtering in web browsers"),
+            ("Referrer-Policy", "Controls how much referrer information should be included with requests"),
+            ("Permissions-Policy", "Controls which browser features and APIs can be used"),
+            ("Cross-Origin-Embedder-Policy", "Prevents a document from loading cross-origin resources that don't explicitly grant permission"),
+            ("Cross-Origin-Opener-Policy", "Controls how document handles cross-origin requests"),
+            ("Cross-Origin-Resource-Policy", "Controls how certain resources can be embedded in cross-origin contexts")
+        };
+        
+        foreach (var header in securityHeadersList)
+        {
+            string headerValue = null;
+            var isPresent = _headers.TryGetValue(header.Name, out headerValue);
+            
+            _securityHeaders.Add(new SecurityHeader
+            {
+                Name = header.Name,
+                Description = header.Description,
+                IsPresent = isPresent,
+                Value = headerValue
+            });
+        }
+    }
+    
+    private string GetHeaderDescription(string headerName)
+    {
+        var descriptions = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            { "Content-Type", "Indicates the media type of the resource" },
+            { "Content-Length", "The size of the entity-body in bytes" },
+            { "Content-Encoding", "Compression algorithm used on the body" },
+            { "Server", "Information about the software used by the origin server" },
+            { "Date", "Date and time at which the message was originated" },
+            { "Status-Code", "HTTP status code from the server" },
+            { "Cache-Control", "Directives for caching mechanisms" },
+            { "ETag", "Identifier for a specific version of a resource" },
+            { "Last-Modified", "Indicates the last modified date of the resource" },
+            { "Connection", "Controls whether the network connection stays open after the transaction" },
+            { "Set-Cookie", "Sends cookies from the server to the user agent" },
+            { "Access-Control-Allow-Origin", "Indicates whether a resource can be shared" },
+            { "Location", "Used to redirect to a new URL" },
+            { "Accept-Ranges", "Indicates if the server supports range requests" },
+            { "Vary", "Determines how to match future request headers to cache entries" }
+        };
+        
+        if (descriptions.TryGetValue(headerName, out var description))
+        {
+            return description;
+        }
+        
+        return "HTTP header field";
+    }
+    
+    private void CopyHeadersToClipboard()
+    {
+        // In a real implementation, this would copy to clipboard
+        // For demo purposes, we'll just show how this would be implemented
+        var headerText = string.Join("\n", _headers.Select(h => $"{h.Key}: {h.Value}"));
+        // This would use JS interop in a real implementation
+    }
+    
+    private void ClearResults()
+    {
+        _headers.Clear();
+        _securityHeaders.Clear();
+        _url = "";
+        _errorMessage = "";
+        StateHasChanged();
+    }
+}
