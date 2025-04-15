@@ -15,7 +15,7 @@
     <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="8.0.13" />
 
     <Reference Include="it-tools">
-      <HintPath>../it-tools/bin/Debug/net8.0/it-tools.dll</HintPath>
+      <HintPath>../../it-tools/bin/Debug/net8.0/it-tools.dll</HintPath>
     </Reference>
   </ItemGroup>
 </Project>
