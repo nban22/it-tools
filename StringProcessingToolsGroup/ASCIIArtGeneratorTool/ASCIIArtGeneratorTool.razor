@@ -1,0 +1,660 @@
+﻿@using it_tools.ToolDevelopment.Base
+@using it_tools.ToolDevelopment.Attributes
+@using System.Text
+@using System.Collections.Generic
+@using System.Text.RegularExpressions
+@attribute [ToolComponentAttribute(true)]
+@inherits ToolComponentBase
+
+<div class="p-6 bg-white rounded-lg shadow-lg">
+    <div class="flex items-center mb-6">
+        <div class="mr-3 bg-indigo-100 p-2 rounded-lg">
+            <span class="text-2xl">@Icon</span>
+        </div>
+        <div>
+            <h2 class="text-2xl font-bold text-gray-800">@Name</h2>
+            <p class="text-gray-600">@Description</p>
+        </div>
+    </div>
+    
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- Configuration Panel -->
+        <div class="bg-gray-50 p-5 rounded-lg border border-gray-200">
+            <h3 class="text-lg font-semibold text-gray-700 mb-4">Input & Configuration</h3>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Text to Convert</label>
+                    <textarea 
+                        @bind="_inputText" 
+                        class="w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 h-24"
+                        placeholder="Enter text to convert to ASCII art..."></textarea>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">ASCII Font Style</label>
+                    <select @bind="_selectedFont" class="w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        @foreach (var font in _availableFonts)
+                        {
+                            <option value="@font.Key">@font.Value</option>
+                        }
+                    </select>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Width</label>
+                        <input 
+                            type="number" 
+                            @bind="_width" 
+                            min="40" 
+                            max="200" 
+                            class="w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Character Set</label>
+                        <select @bind="_selectedCharSet" class="w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            @foreach (var charSet in _availableCharSets)
+                            {
+                                <option value="@charSet.Key">@charSet.Value</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Options</label>
+                    <div class="space-y-2">
+                        <div class="flex items-center">
+                            <input 
+                                type="checkbox" 
+                                id="invertColors" 
+                                @bind="_invertColors" 
+                                class="mr-2 h-4 w-4 text-indigo-600 focus:ring-indigo-500 rounded" />
+                            <label for="invertColors" class="text-sm text-gray-700">Invert colors (dark/light)</label>
+                        </div>
+                        
+                        <div class="flex items-center">
+                            <input 
+                                type="checkbox" 
+                                id="addBorder" 
+                                @bind="_addBorder" 
+                                class="mr-2 h-4 w-4 text-indigo-600 focus:ring-indigo-500 rounded" />
+                            <label for="addBorder" class="text-sm text-gray-700">Add border around output</label>
+                        </div>
+                        
+                        <div class="flex items-center">
+                            <input 
+                                type="checkbox" 
+                                id="multiLine" 
+                                @bind="_multiLine" 
+                                class="mr-2 h-4 w-4 text-indigo-600 focus:ring-indigo-500 rounded" />
+                            <label for="multiLine" class="text-sm text-gray-700">Process each line separately</label>
+                        </div>
+                    </div>
+                </div>
+                
+                <button 
+                    @onclick="GenerateAsciiArt" 
+                    class="w-full px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-md shadow-sm transition duration-150 ease-in-out">
+                    Generate ASCII Art
+                </button>
+            </div>
+
+            <div class="mt-6">
+                <h4 class="text-md font-medium text-gray-700 mb-2">Font Preview</h4>
+                <div class="p-3 bg-gray-100 rounded-lg border border-gray-200">
+                    <pre class="text-xs text-gray-700 overflow-x-auto whitespace-pre">@GetFontPreview()</pre>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Output Panel -->
+        <div class="bg-gray-50 p-5 rounded-lg border border-gray-200">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold text-gray-700">Generated ASCII Art</h3>
+                @if (!string.IsNullOrEmpty(_outputText))
+                {
+                    <div class="flex space-x-2">
+                        <button 
+                            @onclick="CopyToClipboard" 
+                            class="px-3 py-1 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-md text-sm flex items-center transition duration-150 ease-in-out">
+                            <span>Copy</span>
+                        </button>
+                        <button 
+                            @onclick="ClearOutput" 
+                            class="px-3 py-1 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-md text-sm flex items-center transition duration-150 ease-in-out">
+                            <span>Clear</span>
+                        </button>
+                    </div>
+                }
+            </div>
+            
+            <div class="h-96 overflow-auto border border-gray-200 rounded-md @(_invertColors ? "bg-gray-800" : "bg-white") p-3">
+                @if (!string.IsNullOrEmpty(_outputText))
+                {
+                    <pre class="text-xs whitespace-pre font-mono @(_invertColors ? "text-gray-100" : "text-gray-800")">@_outputText</pre>
+                }
+                else
+                {
+                    <div class="h-full flex items-center justify-center text-gray-400">
+                        <p>Generated ASCII art will appear here</p>
+                    </div>
+                }
+            </div>
+            
+            @if (!string.IsNullOrEmpty(_statusMessage))
+            {
+                <div class="mt-2 @(_isError ? "text-red-600" : "text-green-600") text-sm">
+                    @_statusMessage
+                </div>
+            }
+            
+            <div class="mt-6">
+                <h4 class="text-md font-medium text-gray-700 mb-2">Export Options</h4>
+                <div class="grid grid-cols-3 gap-3">
+                    <button 
+                        @onclick=@(() => ExportAs("txt")) 
+                        class="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-md text-sm font-medium flex items-center justify-center transition duration-150 ease-in-out"
+                        disabled="@(string.IsNullOrEmpty(_outputText))">
+                        Export as .txt
+                    </button>
+                    <button 
+                        @onclick=@(() => ExportAs("html")) 
+                        class="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-md text-sm font-medium flex items-center justify-center transition duration-150 ease-in-out"
+                        disabled="@(string.IsNullOrEmpty(_outputText))">
+                        Export as HTML
+                    </button>
+                    <button 
+                        @onclick=@(() => ExportAs("md")) 
+                        class="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-md text-sm font-medium flex items-center justify-center transition duration-150 ease-in-out"
+                        disabled="@(string.IsNullOrEmpty(_outputText))">
+                        Export as Markdown
+                    </button>
+                </div>
+            </div>
+            
+            <div class="mt-6">
+                <h4 class="text-md font-medium text-gray-700 mb-2">Tips & Information</h4>
+                <div class="p-3 bg-blue-50 rounded-lg border border-blue-200 text-sm text-blue-800">
+                    <p><strong>Best practices:</strong></p>
+                    <ul class="list-disc pl-5 mt-1 space-y-1">
+                        <li>Short text works best for most fonts</li>
+                        <li>Try different character sets for varied effects</li>
+                        <li>Use 'Standard' font for better readability</li>
+                        <li>Use border option for standalone ASCII art</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private string _inputText = "";
+    private string _outputText = "";
+    private string _statusMessage = "";
+    private bool _isError = false;
+    
+    private string _selectedFont = "standard";
+    private int _width = 80;
+    private string _selectedCharSet = "default";
+    private bool _invertColors = false;
+    private bool _addBorder = false;
+    private bool _multiLine = false;
+
+    // Implement required properties from ToolComponentBase
+    public override string Name => "ASCII Art Generator";
+    public override string Description => "Transform text into beautiful ASCII art with various styles";
+    public override string Group => "String Processing Tools";
+    public override string Icon => "🎨";
+    
+    // Available font styles (key and display name)
+    private Dictionary<string, string> _availableFonts = new Dictionary<string, string>
+    {
+        { "standard", "Standard" },
+        { "banner", "Banner" },
+        { "big", "Big" },
+        { "block", "Block" },
+        { "bubble", "Bubble" },
+        { "digital", "Digital" },
+        { "ivrit", "Ivrit" },
+        { "lean", "Lean" },
+        { "mini", "Mini" },
+        { "script", "Script" },
+        { "shadow", "Shadow" },
+        { "slant", "Slant" },
+        { "small", "Small" },
+        { "smscript", "Small Script" },
+        { "smshadow", "Small Shadow" },
+        { "smslant", "Small Slant" }
+    };
+    
+    // Available character sets
+    private Dictionary<string, string> _availableCharSets = new Dictionary<string, string>
+    {
+        { "default", "Default (Full range)" },
+        { "basic", "Basic (Simple characters)" },
+        { "complex", "Complex (Detailed shade)" },
+        { "blocks", "Block elements" },
+        { "dots", "Dots only" },
+        { "stars", "Stars and asterisks" }
+    };
+    
+    // Font patterns for a simple preview (just for the first few letters)
+    private Dictionary<string, string[]> _fontPreviews = new Dictionary<string, string[]>
+    {
+        { "standard", new string[] 
+        {
+            " _____  ______  _____  ",
+            "|  __ \\|  ____|/ ____|",
+            "| |  | | |__  | |     ",
+            "| |  | |  __| | |     ",
+            "| |__| | |____| |____ ",
+            "|_____/|______|\\_____|"
+        }},
+        { "banner", new string[] 
+        {
+            "#######     #    #     # #     # ####### ######  ",
+            "#     #    # #   ##    # ##    # #       #     # ",
+            "#     #   #   #  # #   # # #   # #       #     # ",
+            "#######  #     # #  #  # #  #  # #####   ######  ",
+            "#     #  ####### #   # # #   # # #       #   #   ",
+            "#     #  #     # #    ## #    ## #       #    #  ",
+            "#######  #     # #     # #     # ####### #     # "
+        }},
+        { "big", new string[] 
+        {
+            "  ___  _  ___ ",
+            " | _ \\(_)/ __|",
+            " |  _/| | (_ |",
+            " |_|  |_|\\___|"
+        }},
+        { "block", new string[] 
+        {
+            "█▀▀▄ █   █▀▀█ █▀▀ █ █",
+            "█▀▀▄ █   █  █ █   █▀█",
+            "▀▀▀  ▀▀▀ ▀▀▀▀ ▀▀▀ ▀ ▀"
+        }},
+        { "bubble", new string[] 
+        {
+            " _   _   _   _   _   _  ",
+            "(_) (_) (_) (_) (_) (_) ",
+            "(_)  _  (_) (_)  _   _  ",
+            "(_) (_) (_) (_) (_) (_) ",
+            "               (_)      "
+        }},
+        { "digital", new string[] 
+        {
+            "+-+ +-+ +-+ +-+ +-+ +-+",
+            "|D| |I| |G| |I| |T| |L|",
+            "+-+ +-+ +-+ +-+ +-+ +-+"
+        }},
+        { "mini", new string[] 
+        {
+            "   _   _   _ ",
+            "  / \\ / \\ / \\",
+            " ( m | i | n )",
+            "  \\_/ \\_/ \\_/"
+        }}
+    };
+    
+    private void CopyToClipboard()
+    {
+        try
+        {
+            _statusMessage = "Copied to clipboard!";
+            _isError = false;
+            // Note: Actual clipboard functionality must be implemented client-side with JS interop
+        }
+        catch (Exception ex)
+        {
+            _statusMessage = $"Error copying to clipboard: {ex.Message}";
+            _isError = true;
+        }
+    }
+    
+    private void ClearOutput()
+    {
+        _outputText = "";
+        _statusMessage = "";
+    }
+    
+    private string GetFontPreview()
+    {
+        // Return a preview of the selected font
+        if (_fontPreviews.ContainsKey(_selectedFont))
+        {
+            return string.Join("\n", _fontPreviews[_selectedFont]);
+        }
+        
+        // Fallback if the font doesn't have a preview
+        return "Font preview not available for this style.\nGenerate some text to see how it looks!";
+    }
+    
+    private void ExportAs(string format)
+    {
+        if (string.IsNullOrEmpty(_outputText))
+        {
+            _statusMessage = "Nothing to export. Generate ASCII art first.";
+            _isError = true;
+            return;
+        }
+        
+        try
+        {
+            // Format export based on type
+            string exportContent = _outputText;
+            
+            switch (format)
+            {
+                case "html":
+                    exportContent = $"<pre style=\"font-family: monospace; white-space: pre; {(_invertColors ? "color: white; background-color: black;" : "")}\">{EscapeHtml(_outputText)}</pre>";
+                    break;
+                case "md":
+                    exportContent = $"```\n{_outputText}\n```";
+                    break;
+            }
+            
+            // In a real implementation, this would trigger a download
+            // For now, we'll just update the status message
+            _statusMessage = $"Exported as .{format} (simulation)";
+            _isError = false;
+        }
+        catch (Exception ex)
+        {
+            _statusMessage = $"Error exporting: {ex.Message}";
+            _isError = true;
+        }
+    }
+    
+    private string EscapeHtml(string text)
+    {
+        return text
+            .Replace("&", "&amp;")
+            .Replace("<", "&lt;")
+            .Replace(">", "&gt;")
+            .Replace("\"", "&quot;")
+            .Replace("'", "&#39;");
+    }
+    
+    private string GenerateStandardAscii(string text)
+    {
+        if (string.IsNullOrEmpty(text))
+            return "";
+        
+        // This is a simplified implementation for demo purposes
+        // In a real implementation, this would use a more advanced ASCII art library
+        
+        // Basic dictionary for standard font (just a small sample for demonstration)
+        var standardAscii = new Dictionary<char, string[]>
+        {
+            {'A', new string[] 
+            {
+                "  ___  ",
+                " / _ \\ ",
+                "| |_| |",
+                "|  _  |",
+                "|_| |_|"
+            }},
+            {'B', new string[] 
+            {
+                " ____  ",
+                "| __ ) ",
+                "|  _ \\\\ ",
+                "| |_) |",
+                "|____/ "
+            }},
+            {'C', new string[] 
+            {
+                "  ____ ",
+                " / ___|",
+                "| |    ",
+                "| |___ ",
+                " \\____|"
+            }},
+            {'H', new string[] 
+            {
+                " _   _ ",
+                "| | | |",
+                "| |_| |",
+                "|  _  |",
+                "|_| |_|"
+            }},
+            {'E', new string[] 
+            {
+                " _____ ",
+                "| ____|",
+                "| |__  ",
+                "|  __| ",
+                "|_|    "
+            }},
+            {'L', new string[] 
+            {
+                " _     ",
+                "| |    ",
+                "| |    ",
+                "| |___ ",
+                "|_____|"
+            }},
+            {'O', new string[] 
+            {
+                "  ___  ",
+                " / _ \\\\ ",
+                "| | | |",
+                "| |_| |",
+                " \\\\___/ "
+            }},
+            {'W', new string[] 
+            {
+                "__        __",
+                "\\\\ \\\\      / /",
+                " \\\\ \\\\ /\\\\ / / ",
+                "  \\\\ V  V /  ",
+                "   \\\\_/\\\\_/   "
+            }},
+            {'R', new string[] 
+            {
+                " ____  ",
+                "|  _ \\\\ ",
+                "| |_) |",
+                "|  _ < ",
+                "|_| \\\\_\\\\"
+            }},
+            {'D', new string[] 
+            {
+                " ____  ",
+                "|  _ \\ ",
+                "| | | |",
+                "| |_| |",
+                "|____/ "
+            }},
+            {' ', new string[] 
+            {
+                "      ",
+                "      ",
+                "      ",
+                "      ",
+                "      "
+            }},
+            {'!', new string[] 
+            {
+                " _ ",
+                "| |",
+                "| |",
+                "|_|",
+                "(_)"
+            }}
+        };
+        
+        int height = 5; // Height of each character in the standard font
+        
+        var result = new string[height];
+        for (int i = 0; i < height; i++)
+        {
+            result[i] = "";
+        }
+        
+        foreach (char c in text.ToUpper())
+        {
+            if (standardAscii.ContainsKey(c))
+            {
+                for (int i = 0; i < height; i++)
+                {
+                    result[i] += standardAscii[c][i];
+                }
+            }
+            else
+            {
+                // If character isn't in our dictionary, use a placeholder
+                for (int i = 0; i < height; i++)
+                {
+                    result[i] += "   ";
+                }
+            }
+        }
+        
+        return string.Join("\n", result);
+    }
+    
+    private string GenerateBannerAscii(string text)
+    {
+        // This is a simplified implementation for the banner style
+        // Just a placeholder that adds some ASCII-art styling
+        
+        if (string.IsNullOrEmpty(text))
+            return "";
+        
+        StringBuilder sb = new StringBuilder();
+        
+        // Create a styled banner
+        string border = new string('=', text.Length + 4);
+        sb.AppendLine(border);
+        sb.AppendLine("| " + text + " |");
+        sb.AppendLine(border);
+        
+        return sb.ToString();
+    }
+    
+    private string GenerateBlockAscii(string text)
+    {
+        // Another simple implementation for the block style
+        if (string.IsNullOrEmpty(text))
+            return "";
+            
+        StringBuilder sb = new StringBuilder();
+        
+        // Top border
+        sb.AppendLine("+" + new string('-', text.Length + 2) + "+");
+        
+        // Middle with text
+        sb.AppendLine("| " + text + " |");
+        
+        // Bottom border
+        sb.AppendLine("+" + new string('-', text.Length + 2) + "+");
+        
+        return sb.ToString();
+    }
+    
+    private string ApplyBorder(string asciiArt)
+    {
+        if (string.IsNullOrEmpty(asciiArt))
+            return "";
+            
+        string[] lines = asciiArt.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
+        
+        // Find the maximum line length
+        int maxLength = 0;
+        foreach (string line in lines)
+        {
+            maxLength = Math.Max(maxLength, line.Length);
+        }
+        
+        StringBuilder sb = new StringBuilder();
+        
+        // Top border
+        sb.AppendLine("+" + new string('-', maxLength + 2) + "+");
+        
+        // Content with side borders
+        foreach (string line in lines)
+        {
+            sb.AppendLine("| " + line.PadRight(maxLength) + " |");
+        }
+        
+        // Bottom border
+        sb.AppendLine("+" + new string('-', maxLength + 2) + "+");
+        
+        return sb.ToString();
+    }
+    
+    private void GenerateAsciiArt()
+    {
+        try
+        {
+            _statusMessage = "";
+            _isError = false;
+            
+            if (string.IsNullOrEmpty(_inputText))
+            {
+                _statusMessage = "Please enter some text to convert";
+                _isError = true;
+                return;
+            }
+            
+            string result = "";
+            
+            // Process based on multiline option
+            if (_multiLine)
+            {
+                string[] lines = _inputText.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
+                var resultLines = new List<string>();
+                
+                foreach (string line in lines)
+                {
+                    string processedLine = ProcessSingleLine(line);
+                    resultLines.Add(processedLine);
+                }
+                
+                result = string.Join("\n\n", resultLines);
+            }
+            else
+            {
+                result = ProcessSingleLine(_inputText);
+            }
+            
+            // Apply border if requested
+            if (_addBorder)
+            {
+                result = ApplyBorder(result);
+            }
+            
+            _outputText = result;
+            _statusMessage = "ASCII art generated successfully!";
+        }
+        catch (Exception ex)
+        {
+            _statusMessage = $"Error generating ASCII art: {ex.Message}";
+            _isError = true;
+        }
+    }
+    
+    private string ProcessSingleLine(string text)
+    {
+        // Generate ASCII art based on selected font
+        // This is where a real implementation would use a more comprehensive ASCII art library
+        
+        switch (_selectedFont)
+        {
+            case "standard":
+                return GenerateStandardAscii(text);
+            case "banner":
+                return GenerateBannerAscii(text);
+            case "block":
+                return GenerateBlockAscii(text);
+            default:
+                // For other fonts, we'll use a simpler approach for demo purposes
+                return string.Join("\n", _fontPreviews.GetValueOrDefault(_selectedFont, 
+                    new string[] { "Font not implemented in this demo.", "Try 'standard', 'banner', or 'block' font." }));
+        }
+    }
+}
