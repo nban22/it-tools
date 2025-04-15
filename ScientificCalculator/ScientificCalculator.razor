@@ -1,0 +1,378 @@
+﻿@using it_tools.ToolDevelopment.Base
+@using it_tools.ToolDevelopment.Attributes
+@using Microsoft.JSInterop
+@inject IJSRuntime JSRuntime
+@inherits ToolComponentBase
+
+<div class="p-6 bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen flex items-center justify-center">
+    <div class="max-w-lg w-full">
+        <!-- Header -->
+        <div class="flex items-center justify-between mb-8 animate-fade-in">
+            <div>
+                <h2 class="text-3xl font-extrabold text-gray-900 tracking-tight">@Name</h2>
+                <p class="text-gray-600 mt-1">@Description</p>
+            </div>
+        </div>
+
+        <!-- Calculator -->
+        <div class="bg-white p-6 rounded-2xl shadow-xl animate-slide-in">
+            <!-- Display -->
+            <div class="mb-4">
+                <input type="text" value="@Display" readonly class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-right text-2xl font-semibold text-gray-800 focus:outline-none h-14" />
+            </div>
+
+            <!-- Buttons -->
+            <div class="grid grid-cols-4 gap-2">
+                <!-- Row 1 -->
+                <button @onclick="Clear" class="p-4 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-all duration-200 shadow-md text-lg">C</button>
+                <button @onclick="@(() => AppendToExpression("("))" class="p-4 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-all duration-200 shadow-md text-lg">(</button>
+                <button @onclick="@(() => AppendToExpression(")"))" class="p-4 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-all duration-200 shadow-md text-lg">)</button>
+                <button @onclick="@(() => AppendToExpression("/"))" class="p-4 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-all duration-200 shadow-md text-lg">÷</button>
+
+                <!-- Row 2 -->
+                <button @onclick="@(() => AppendToExpression("7"))" class="p-4 bg-gray-100 text-gray-800 rounded-lg hover:bg-gray-200 transition-all duration-200 shadow-md text-lg">7</button>
+                <button @onclick="@(() => AppendToExpression("8"))" class="p-4 bg-gray-100 text-gray-800 rounded-lg hover:bg-gray-200 transition-all duration-200 shadow-md text-lg">8</button>
+                <button @onclick="@(() => AppendToExpression("9"))" class="p-4 bg-gray-100 text-gray-800 rounded-lg hover:bg-gray-200 transition-all duration-200 shadow-md text-lg">9</button>
+                <button @onclick="@(() => AppendToExpression("*"))" class="p-4 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-all duration-200 shadow-md text-lg">×</button>
+
+                <!-- Row 3 -->
+                <button @onclick="@(() => AppendToExpression("4"))" class="p-4 bg-gray-100 text-gray-800 rounded-lg hover:bg-gray-200 transition-all duration-200 shadow-md text-lg">4</button>
+                <button @onclick="@(() => AppendToExpression("5"))" class="p-4 bg-gray-100 text-gray-800 rounded-lg hover:bg-gray-200 transition-all duration-200 shadow-md text-lg">5</button>
+                <button @onclick="@(() => AppendToExpression("6"))" class="p-4 bg-gray-100 text-gray-800 rounded-lg hover:bg-gray-200 transition-all duration-200 shadow-md text-lg">6</button>
+                <button @onclick="@(() => AppendToExpression("-"))" class="p-4 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-all duration-200 shadow-md text-lg">-</button>
+
+                <!-- Row 4 -->
+                <button @onclick="@(() => AppendToExpression("1"))" class="p-4 bg-gray-100 text-gray-800 rounded-lg hover:bg-gray-200 transition-all duration-200 shadow-md text-lg">1</button>
+                <button @onclick="@(() => AppendToExpression("2"))" class="p-4 bg-gray-100 text-gray-800 rounded-lg hover:bg-gray-200 transition-all duration-200 shadow-md text-lg">2</button>
+                <button @onclick="@(() => AppendToExpression("3"))" class="p-4 bg-gray-100 text-gray-800 rounded-lg hover:bg-gray-200 transition-all duration-200 shadow-md text-lg">3</button>
+                <button @onclick="@(() => AppendToExpression("+"))" class="p-4 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-all duration-200 shadow-md text-lg">+</button>
+
+                <!-- Row 5 -->
+                <button @onclick="@(() => AppendToExpression("0"))" class="col-span-1 p-4 bg-gray-100 text-gray-800 rounded-lg hover:bg-gray-200 transition-all duration-200 shadow-md text-lg">0</button>
+                <button @onclick="@(() => AppendToExpression("."))" class="col-span-1 p-4 bg-gray-100 text-gray-800 rounded-lg hover:bg-gray-200 transition-all duration-200 shadow-md text-lg">.</button>
+                <button @onclick="Backspace" class="col-span-1 p-4 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-all duration-200 shadow-md text-lg">⌫</button>
+                <button @onclick="Calculate" disabled="@_isProcessing" class="col-span-1 p-4 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-all duration-200 shadow-md text-lg">=</button>
+
+                <!-- Row 6: Scientific Functions -->
+                <button @onclick="@(() => ApplyFunction("sin"))" class="col-span-1 p-4 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-all duration-200 shadow-md text-sm">sin</button>
+                <button @onclick="@(() => ApplyFunction("cos"))" class="col-span-1 p-4 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-all duration-200 shadow-md text-sm">cos</button>
+                <button @onclick="@(() => ApplyFunction("tan"))" class="col-span-1 p-4 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-all duration-200 shadow-md text-sm">tan</button>
+                <button @onclick="@(() => ApplyFunction("sqrt"))" class="col-span-1 p-4 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-all duration-200 shadow-md text-sm">√</button>
+
+                <!-- Row 7: More Scientific Functions -->
+                <button @onclick="@(() => ApplyFunction("log"))" class="col-span-1 p-4 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-all duration-200 shadow-md text-sm">log</button>
+                <button @onclick="@(() => ApplyFunction("exp"))" class="col-span-1 p-4 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-all duration-200 shadow-md text-sm">e^x</button>
+                <button @onclick="@(() => AppendToExpression("^"))" class="col-span-1 p-4 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-all duration-200 shadow-md text-sm">^</button>
+                <button @onclick="@(() => AppendToExpression("3.14159265359"))" class="col-span-1 p-4 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-all duration-200 shadow-md text-sm">π</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    @if (_showToast)
+    {
+        <div class="fixed bottom-6 right-6 z-50 animate-toast-in">
+            <div class="flex items-center bg-@(_toastSuccess ? "green" : "red")-500 text-white px-4 py-3 rounded-lg shadow-lg">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="@(_toastSuccess ? "M5 13l4 4L19 7" : "M6 18L18 6M6 6l12 12")" />
+                </svg>
+                <span>@_toastMessage</span>
+            </div>
+        </div>
+    }
+</div>
+
+<style>
+    @@keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+
+    @@keyframes slideIn {
+        from { transform: translateY(-20px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+    }
+
+    @@keyframes toastIn {
+        from { transform: translateY(20px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+    }
+
+    @@keyframes toastOut {
+        from { transform: translateY(0); opacity: 1; }
+        to { transform: translateY(20px); opacity: 0; }
+    }
+
+    .animate-fade-in {
+        animation: fadeIn 0.5s ease-in-out;
+    }
+
+    .animate-slide-in {
+        animation: slideIn 0.5s ease-in-out;
+    }
+
+    .animate-toast-in {
+        animation: toastIn 0.3s ease-in-out;
+    }
+
+    .animate-toast-out {
+        animation: toastOut 0.3s ease-in-out forwards;
+    }
+</style>
+
+@code {
+    private string Expression { get; set; } = "";
+    private string Display => string.IsNullOrEmpty(Expression) ? "0" : Expression;
+    private bool _isProcessing = false;
+    private bool _showToast = false;
+    private bool _toastSuccess = false;
+    private string _toastMessage = "";
+
+    // Metadata for the tool
+    public override string Name => "Scientific Calculator";
+    public override string Description => "Perform basic and scientific calculations with ease.";
+    public override string Slug => "scientific-calculator";
+    public override string Group => "Math Tools";
+    public override string Icon => "🖩";
+
+    private void Clear()
+    {
+        Expression = "";
+        StateHasChanged();
+    }
+
+    private void Backspace()
+    {
+        if (Expression.Length > 0)
+        {
+            Expression = Expression.Substring(0, Expression.Length - 1);
+            StateHasChanged();
+        }
+    }
+
+    private void AppendToExpression(string value)
+    {
+        Expression += value;
+        StateHasChanged();
+    }
+
+    private async Task ApplyFunction(string func)
+    {
+        if (string.IsNullOrEmpty(Expression))
+        {
+            await ShowToast(false, "Please enter a number first.");
+            return;
+        }
+
+        _isProcessing = true;
+        try
+        {
+            double value = EvaluateExpression(Expression);
+            double result = func switch
+            {
+                "sin" => Math.Sin(value * Math.PI / 180), // Degrees to radians
+                "cos" => Math.Cos(value * Math.PI / 180),
+                "tan" => Math.Tan(value * Math.PI / 180),
+                "sqrt" => value >= 0 ? Math.Sqrt(value) : throw new Exception("Cannot calculate square root of a negative number."),
+                "log" => value > 0 ? Math.Log10(value) : throw new Exception("Cannot calculate log of a non-positive number."),
+                "exp" => Math.Exp(value),
+                _ => throw new Exception("Invalid function.")
+            };
+
+            Expression = double.IsNaN(result) || double.IsInfinity(result)
+                ? "Error"
+                : result.ToString("F6").TrimEnd('0').TrimEnd('.');
+        }
+        catch (Exception ex)
+        {
+            await ShowToast(false, $"Error: {ex.Message}");
+            Expression = "Error";
+        }
+        finally
+        {
+            _isProcessing = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task Calculate()
+    {
+        if (string.IsNullOrEmpty(Expression))
+        {
+            await ShowToast(false, "Please enter an expression.");
+            return;
+        }
+
+        _isProcessing = true;
+        try
+        {
+            double result = EvaluateExpression(Expression);
+            Expression = double.IsNaN(result) || double.IsInfinity(result)
+                ? "Error"
+                : result.ToString("F6").TrimEnd('0').TrimEnd('.');
+        }
+        catch (Exception ex)
+        {
+            await ShowToast(false, $"Error: {ex.Message}");
+            Expression = "Error";
+        }
+        finally
+        {
+            _isProcessing = false;
+            StateHasChanged();
+        }
+    }
+
+    private double EvaluateExpression(string expression)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(expression))
+                throw new Exception("Expression is empty.");
+
+            // Simple expression parser (shunting-yard algorithm for basic operations)
+            var tokens = TokenizeExpression(expression);
+            var output = new Queue<string>();
+            var operators = new Stack<string>();
+
+            foreach (var token in tokens)
+            {
+                if (double.TryParse(token, out _))
+                {
+                    output.Enqueue(token);
+                }
+                else if (token == "+" || token == "-" || token == "*" || token == "/" || token == "^")
+                {
+                    while (operators.Count > 0 && operators.Peek() != "(" &&
+                           GetPrecedence(operators.Peek()) >= GetPrecedence(token))
+                    {
+                        output.Enqueue(operators.Pop());
+                    }
+                    operators.Push(token);
+                }
+                else if (token == "(")
+                {
+                    operators.Push(token);
+                }
+                else if (token == ")")
+                {
+                    while (operators.Count > 0 && operators.Peek() != "(")
+                    {
+                        output.Enqueue(operators.Pop());
+                    }
+                    if (operators.Count > 0 && operators.Peek() == "(")
+                        operators.Pop();
+                    else
+                        throw new Exception("Mismatched parentheses.");
+                }
+            }
+
+            while (operators.Count > 0)
+            {
+                if (operators.Peek() == "(" || operators.Peek() == ")")
+                    throw new Exception("Mismatched parentheses.");
+                output.Enqueue(operators.Pop());
+            }
+
+            // Evaluate using stack
+            var stack = new Stack<double>();
+            foreach (var token in output)
+            {
+                if (double.TryParse(token, out var number))
+                {
+                    stack.Push(number);
+                }
+                else
+                {
+                    if (stack.Count < 2)
+                        throw new Exception("Invalid expression.");
+                    var b = stack.Pop();
+                    var a = stack.Pop();
+                    stack.Push(token switch
+                    {
+                        "+" => a + b,
+                        "-" => a - b,
+                        "*" => a * b,
+                        "/" => b != 0 ? a / b : throw new Exception("Division by zero."),
+                        "^" => Math.Pow(a, b),
+                        _ => throw new Exception("Invalid operator.")
+                    });
+                }
+            }
+
+            if (stack.Count != 1)
+                throw new Exception("Invalid expression.");
+
+            return stack.Pop();
+        }
+        catch (Exception ex)
+        {
+            throw new Exception($"Invalid expression: {ex.Message}");
+        }
+    }
+
+    private List<string> TokenizeExpression(string expression)
+    {
+        var tokens = new List<string>();
+        var currentNumber = new System.Text.StringBuilder();
+        expression = expression.Replace(" ", "").Replace("**", "^");
+
+        for (int i = 0; i < expression.Length; i++)
+        {
+            char c = expression[i];
+
+            if (char.IsDigit(c) || c == '.')
+            {
+                currentNumber.Append(c);
+            }
+            else
+            {
+                if (currentNumber.Length > 0)
+                {
+                    tokens.Add(currentNumber.ToString());
+                    currentNumber.Clear();
+                }
+
+                if (c == '+' || c == '-' || c == '*' || c == '/' || c == '^' || c == '(' || c == ')')
+                {
+                    tokens.Add(c.ToString());
+                }
+                else
+                {
+                    throw new Exception($"Invalid character: {c}");
+                }
+            }
+        }
+
+        if (currentNumber.Length > 0)
+        {
+            tokens.Add(currentNumber.ToString());
+        }
+
+        return tokens;
+    }
+
+    private int GetPrecedence(string op)
+    {
+        return op switch
+        {
+            "+" => 1,
+            "-" => 1,
+            "*" => 2,
+            "/" => 2,
+            "^" => 3,
+            _ => 0
+        };
+    }
+
+    private async Task ShowToast(bool success, string message)
+    {
+        _toastSuccess = success;
+        _toastMessage = message;
+        _showToast = true;
+        StateHasChanged();
+        await Task.Delay(3000);
+        _showToast = false;
+        StateHasChanged();
+    }
+}
