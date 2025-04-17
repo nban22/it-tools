@@ -1,0 +1,284 @@
+﻿@using it_tools.ToolDevelopment.Base
+@using it_tools.ToolDevelopment.Attributes
+@using Microsoft.JSInterop
+@inject IJSRuntime JSRuntime
+@inherits ToolComponentBase
+
+<div class="p-6 bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen flex items-center justify-center">
+    <div class="max-w-lg w-full">
+        <div class="flex items-center justify-between mb-8 animate-fade-in">
+            <div>
+                <h2 class="text-3xl font-extrabold text-gray-900 tracking-tight">@Name</h2>
+                <p class="text-gray-600 mt-2 text-lg">@Description</p>
+            </div>
+        </div>
+
+        <div class="bg-white p-8 rounded-2xl shadow-xl mb-6 animate-slide-in">
+            <div class="space-y-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Conversion Type:</label>
+                    <select @bind="_conversionType" @bind:after="ResetValues" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-gray-800">
+                        <option value="Length">Length</option>
+                        <option value="Weight">Weight</option>
+                        <option value="Temperature">Temperature</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Value:</label>
+                    <input type="text" @bind="_inputValue" @bind:after="ConvertUnits" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-gray-800 placeholder-gray-400" placeholder="Enter value to convert" />
+                    @if (_hasSubmitted && _inputErrorMessage != null)
+                    {
+                        <p class="text-red-500 text-xs mt-1 animate-fade-in">@_inputErrorMessage</p>
+                    }
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">From Unit:</label>
+                        <select @bind="_fromUnit" @bind:after="ConvertUnits" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-gray-800">
+                            @foreach (var unit in GetUnits(_conversionType))
+                            {
+                                <option value="@unit">@unit</option>
+                            }
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">To Unit:</label>
+                        <select @bind="_toUnit" @bind:after="ConvertUnits" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-gray-800">
+                            @foreach (var unit in GetUnits(_conversionType))
+                            {
+                                <option value="@unit">@unit</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @if (_hasSubmitted && !string.IsNullOrEmpty(_conversionResult))
+        {
+            <div class="bg-white p-8 rounded-2xl shadow-xl animate-slide-in">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-xl font-semibold text-gray-800">Conversion Result</h3>
+                    <button @onclick="CopyResult" disabled="@_isCopying" class="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all duration-200 shadow-md disabled:opacity-50 disabled:cursor-not-allowed">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                        </svg>
+                        @if (_isCopying)
+                        {
+                            <span>Copying...</span>
+                        }
+                        else
+                        {
+                            <span>Copy Result</span>
+                        }
+                    </button>
+                </div>
+                <p class="text-gray-800 font-semibold">@_conversionResult</p>
+            </div>
+        }
+    </div>
+</div>
+
+@if (_showToast)
+{
+    <div class="fixed bottom-6 right-6 z-50 animate-toast-in">
+        <div class="flex items-center bg-@(_toastSuccess ? "green" : "red")-500 text-white px-4 py-3 rounded-lg shadow-lg">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="@(_toastSuccess ? "M5 13l4 4L19 7" : "M6 18L18 6M6 6l12 12")" />
+            </svg>
+            <span>@_toastMessage</span>
+        </div>
+    </div>
+}
+
+<style>
+    @@keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+
+    @@keyframes slideIn {
+        from { transform: translateY(-20px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+    }
+
+    @@keyframes toastIn {
+        from { transform: translateY(20px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+    }
+
+    @@keyframes toastOut {
+        from { transform: translateY(0); opacity: 1; }
+        to { transform: translateY(20px); opacity: 0; }
+    }
+
+    .animate-fade-in {
+        animation: fadeIn 0.5s ease-in-out;
+    }
+
+    .animate-slide-in {
+        animation: slideIn 0.5s ease-in-out;
+    }
+
+    .animate-toast-in {
+        animation: toastIn 0.3s ease-in-out;
+    }
+
+    .animate-toast-out {
+        animation: toastOut 0.3s ease-in-out forwards;
+    }
+</style>
+
+@code {
+    private string _conversionType { get; set; } = "Length";
+    private string _inputValue { get; set; } = "";
+    private string _fromUnit { get; set; } = "Meter";
+    private string _toUnit { get; set; } = "Meter";
+    private string _conversionResult { get; set; } = "";
+    private string? _inputErrorMessage { get; set; }
+    private bool _hasSubmitted { get; set; }
+    private bool _isCopying { get; set; }
+    private bool _showToast { get; set; }
+    private bool _toastSuccess { get; set; }
+    private string _toastMessage { get; set; } = "";
+
+    public override string Name => "Unit Converter";
+    public override string Description => "Convert between different units of length, weight, and temperature.";
+    public override string Slug => "unit-converter";
+    public override string Group => "Measure Tools";
+    public override string Icon => "📏";
+
+    private static readonly Dictionary<string, string[]> UnitTypes = new()
+    {
+        ["Length"] = ["Meter", "Kilometer", "Centimeter", "Inch", "Foot"],
+        ["Weight"] = ["Kilogram", "Gram", "Pound", "Ounce"],
+        ["Temperature"] = ["Celsius", "Fahrenheit", "Kelvin"]
+    };
+
+    private static readonly Dictionary<(string Type, string From, string To), Func<double, double>> ConversionRules = new()
+    {
+        [("Length", "Kilometer", "Meter")] = v => v * 1000,
+        [("Length", "Centimeter", "Meter")] = v => v / 100,
+        [("Length", "Inch", "Meter")] = v => v * 0.0254,
+        [("Length", "Foot", "Meter")] = v => v * 0.3048,
+        [("Length", "Meter", "Kilometer")] = v => v / 1000,
+        [("Length", "Meter", "Centimeter")] = v => v * 100,
+        [("Length", "Meter", "Inch")] = v => v / 0.0254,
+        [("Length", "Meter", "Foot")] = v => v / 0.3048,
+
+        [("Weight", "Gram", "Kilogram")] = v => v / 1000,
+        [("Weight", "Pound", "Kilogram")] = v => v * 0.453592,
+        [("Weight", "Ounce", "Kilogram")] = v => v * 0.0283495,
+        [("Weight", "Kilogram", "Gram")] = v => v * 1000,
+        [("Weight", "Kilogram", "Pound")] = v => v / 0.453592,
+        [("Weight", "Kilogram", "Ounce")] = v => v / 0.0283495,
+
+        [("Temperature", "Fahrenheit", "Celsius")] = v => (v - 32) * 5 / 9,
+        [("Temperature", "Kelvin", "Celsius")] = v => v - 273.15,
+        [("Temperature", "Celsius", "Fahrenheit")] = v => v * 9 / 5 + 32,
+        [("Temperature", "Celsius", "Kelvin")] = v => v + 273.15,
+    };
+
+    private string[] GetUnits(string type) => UnitTypes.GetValueOrDefault(type, []);
+
+    private async Task ResetValues()
+    {
+        _inputValue = "";
+        _conversionResult = "";
+        _inputErrorMessage = null;
+        _hasSubmitted = false;
+        _fromUnit = UnitTypes[_conversionType][0];
+        _toUnit = UnitTypes[_conversionType][0];
+        await ConvertUnits();
+    }
+
+    private async Task ConvertUnits()
+    {
+        _hasSubmitted = true;
+        _conversionResult = "";
+        _inputErrorMessage = null;
+
+        if (string.IsNullOrWhiteSpace(_inputValue))
+        {
+            _inputErrorMessage = "Please enter a value to convert.";
+            return;
+        }
+
+        if (!double.TryParse(_inputValue, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var value))
+        {
+            _inputErrorMessage = "Please enter a valid number.";
+            await ShowToast(false, _inputErrorMessage);
+            return;
+        }
+
+        if (_conversionType != "Temperature" && value < 0)
+        {
+            _inputErrorMessage = "Value must be non-negative for length and weight conversions.";
+            await ShowToast(false, _inputErrorMessage);
+            return;
+        }
+
+        try
+        {
+            double result = value;
+            if (_fromUnit != _toUnit)
+            {
+                if (ConversionRules.TryGetValue((_conversionType, _fromUnit, UnitTypes[_conversionType][0]), out var toBase))
+                {
+                    result = toBase(value);
+                }
+
+                if (ConversionRules.TryGetValue((_conversionType, UnitTypes[_conversionType][0], _toUnit), out var fromBase))
+                {
+                    result = fromBase(result);
+                }
+            }
+
+            var format = _conversionType == "Temperature" ? $"{value:F2}° {_fromUnit} = {result:F2}° {_toUnit}" : $"{value:F2} {_fromUnit} = {result:F2} {_toUnit}";
+            _conversionResult = format;
+        }
+        catch (Exception ex)
+        {
+            _inputErrorMessage = $"Error converting units: {ex.Message}";
+            await ShowToast(false, _inputErrorMessage);
+        }
+    }
+
+    private async Task CopyResult()
+    {
+        if (string.IsNullOrEmpty(_conversionResult))
+        {
+            await ShowToast(false, "No result to copy.");
+            return;
+        }
+
+        _isCopying = true;
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", _conversionResult);
+            await ShowToast(true, "Result copied to clipboard!");
+        }
+        catch (Exception ex)
+        {
+            await ShowToast(false, $"Error copying result: {ex.Message}");
+        }
+        finally
+        {
+            _isCopying = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task ShowToast(bool success, string message)
+    {
+        _toastSuccess = success;
+        _toastMessage = message;
+        _showToast = true;
+        StateHasChanged();
+        await Task.Delay(3000);
+        _showToast = false;
+        StateHasChanged();
+    }
+}
