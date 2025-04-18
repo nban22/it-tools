@@ -5,8 +5,6 @@ VisualStudioVersion = 17.13.35818.85
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "it-tools", "it-tools.csproj", "{8FEB9C76-E43A-40C5-BC70-6F50D1573D86}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TokenGeneratorTool", "..\TokenGeneratorTool\TokenGeneratorTool.csproj", "{E58D025F-6315-4D20-9889-EAA9788AD3E3}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU

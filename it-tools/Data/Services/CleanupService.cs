@@ -18,8 +18,6 @@ public class CleanupService : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _logger.LogInformation("CleanupService started.");
-
         while (!stoppingToken.IsCancellationRequested)
         {
             try
@@ -33,8 +31,6 @@ public class CleanupService : BackgroundService
 
             await Task.Delay(TimeSpan.FromMinutes(1), stoppingToken);
         }
-
-        _logger.LogInformation("CleanupService stopped.");
     }
 
     public async Task CleanupPendingDeletionsAsync()
@@ -42,7 +38,6 @@ public class CleanupService : BackgroundService
         string pendingFile = Path.Combine(_environment.ContentRootPath, "pending-deletions.txt");
         if (!_fileSystem.File.Exists(pendingFile))
         {
-            _logger.LogInformation("No pending-deletions.txt file found. Skipping cleanup.");
             return;
         }
 
@@ -51,7 +46,6 @@ public class CleanupService : BackgroundService
         {
             var lines = await _fileSystem.File.ReadAllLinesAsync(pendingFile);
             foldersToDelete.AddRange(lines.Where(line => !string.IsNullOrWhiteSpace(line)).Distinct());
-            _logger.LogInformation("Found {Count} paths in pending-deletions.txt", foldersToDelete.Count);
         }
         catch (Exception ex)
         {
@@ -61,11 +55,9 @@ public class CleanupService : BackgroundService
 
         if (!foldersToDelete.Any())
         {
-            _logger.LogInformation("No folders to delete.");
             try
             {
                 _fileSystem.File.Delete(pendingFile);
-                _logger.LogInformation("Deleted empty pending-deletions.txt.");
             }
             catch (Exception ex)
             {
@@ -86,7 +78,6 @@ public class CleanupService : BackgroundService
             bool deleted = await TryDeleteDirectoryAsync(path, maxRetries: 20, delayMs: 4000); // Tăng số lần thử lên 20, thời gian chờ 4 giây
             if (deleted)
             {
-                _logger.LogInformation("Deleted pending folder: {Path}", path);
                 remainingFolders.Remove(path);
                 _folderRetryCounts.Remove(path);
             }
@@ -107,12 +98,10 @@ public class CleanupService : BackgroundService
             if (remainingFolders.Any())
             {
                 await _fileSystem.File.WriteAllLinesAsync(pendingFile, remainingFolders);
-                _logger.LogInformation("Updated pending-deletions.txt with {Count} remaining folders.", remainingFolders.Count);
             }
             else
             {
                 _fileSystem.File.Delete(pendingFile);
-                _logger.LogInformation("All pending deletions completed, deleted pending-deletions.txt.");
             }
         }
         catch (Exception ex)
@@ -129,12 +118,9 @@ public class CleanupService : BackgroundService
             {
                 if (_fileSystem.Directory.Exists(toolPath))
                 {
-                    _logger.LogInformation("Attempting to delete folder: {ToolPath}, attempt {Attempt}/{MaxRetries}", toolPath, i + 1, maxRetries);
-
                     try
                     {
                         _fileSystem.Directory.EnumerateFiles(toolPath).ToList();
-                        _logger.LogInformation("Application has access to folder: {ToolPath}", toolPath);
                     }
                     catch (UnauthorizedAccessException ex)
                     {
@@ -148,7 +134,6 @@ public class CleanupService : BackgroundService
                         {
                             using (var stream = _fileSystem.File.Open(file, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
                             {
-                                _logger.LogInformation("File {File} is not locked in folder: {ToolPath}", file, toolPath);
                             }
                         }
                         catch (IOException ex)
@@ -165,10 +150,8 @@ public class CleanupService : BackgroundService
                     }
 
                     _fileSystem.Directory.Delete(toolPath, true);
-                    _logger.LogInformation("Deleted pending folder: {ToolPath}", toolPath);
                     return true;
                 }
-                _logger.LogInformation("Folder {ToolPath} no longer exists.", toolPath);
                 return true;
             }
             catch (Exception ex)

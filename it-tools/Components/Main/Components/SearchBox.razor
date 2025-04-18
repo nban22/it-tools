@@ -35,13 +35,9 @@
                                     clip-rule="evenodd" />
                             </svg>
                         </div>
-                        <input @ref="searchInput" 
-                               value="@searchQuery" 
-                               @oninput="HandleSearchInput"
-                               @onkeydown="HandleKeyDown"
-                               class="w-full py-4 px-2 text-gray-700 focus:outline-none text-lg"
-                               placeholder="Search for tools..." 
-                               autocomplete="off" />
+                        <input @ref="searchInput" value="@searchQuery" @oninput="HandleSearchInput"
+                            @onkeydown="HandleKeyDown" class="w-full py-4 px-2 text-gray-700 focus:outline-none text-lg"
+                            placeholder="Search for tools..." autocomplete="off" />
                         @if (!string.IsNullOrEmpty(searchQuery))
                         {
                             <button @onclick="() => ClearSearch()" class="px-4 text-gray-500 hover:text-gray-700">
@@ -213,18 +209,14 @@
     // Debounced search
     private async Task SearchTools()
     {
-        Console.WriteLine("Logger: Beginning SearchTools method");
-        Console.WriteLine($"Logger: Current searchQuery: '{searchQuery}'");
 
         // Cancel previous search if any
         _cancellationTokenSource?.Cancel();
         _cancellationTokenSource = new CancellationTokenSource();
         var token = _cancellationTokenSource.Token;
-        Console.WriteLine("Logger: Created new cancellation token");
 
         if (string.IsNullOrWhiteSpace(searchQuery))
         {
-            Console.WriteLine("Logger: searchQuery is empty, clearing results and returning");
             searchResults.Clear();
             StateHasChanged();
             return;
@@ -232,58 +224,42 @@
 
         try
         {
-            Console.WriteLine("Logger: Starting debounce delay");
             // Delay to debounce typing
             await Task.Delay(300, token);
-            Console.WriteLine("Logger: Debounce delay completed");
 
             isSearching = true;
             StateHasChanged();
-            Console.WriteLine("Logger: Set isSearching to true and called StateHasChanged");
 
-            Console.WriteLine($"Logger: Calling SearchService.SearchAsync with query: '{searchQuery}'");
             var results = await SearchService.SearchAsync(searchQuery);
-            Console.WriteLine($"Logger: Search completed, got {results?.Count() ?? 0} results");
 
             if (!token.IsCancellationRequested)
             {
-                Console.WriteLine("Logger: No cancellation requested, updating search results");
                 searchResults = results ?? new List<SearchResultDto>();
                 selectedIndex = searchResults.Any() ? 0 : -1;
-                Console.WriteLine($"Logger: Updated selectedIndex to {selectedIndex}");
             }
             else
             {
-                Console.WriteLine("Logger: Cancellation was requested, ignoring results");
             }
         }
         catch (TaskCanceledException)
         {
             // Task was canceled, do nothing
-            Console.WriteLine("Logger: TaskCanceledException caught - search was canceled");
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            Console.WriteLine($"Logger: Search error: {ex.Message}");
-            Console.WriteLine($"Logger: Exception type: {ex.GetType().Name}");
-            Console.WriteLine($"Logger: Stack trace: {ex.StackTrace}");
         }
         finally
         {
             if (!token.IsCancellationRequested)
             {
-                Console.WriteLine("Logger: No cancellation requested in finally block");
                 isSearching = false;
                 StateHasChanged();
-                Console.WriteLine("Logger: Set isSearching to false and called StateHasChanged");
             }
             else
             {
-                Console.WriteLine("Logger: Cancellation was requested in finally block, skipping UI update");
             }
         }
 
-        Console.WriteLine("Logger: SearchTools method completed");
     }
 
     // Navigate to a search result
@@ -345,10 +321,10 @@
             // Set up keyboard shortcut (Ctrl+K or Cmd+K)
             await JSRuntime.InvokeVoidAsync("eval", @"
 window.addEventListener('keydown', function(e) {
-    if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
-        e.preventDefault();
-        DotNet.invokeMethod('it_tools', 'ToggleSearch');
-    }
+if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+e.preventDefault();
+DotNet.invokeMethod('it_tools', 'ToggleSearch');
+}
 });
 ");
         }

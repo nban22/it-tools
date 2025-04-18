@@ -72,14 +72,12 @@
 
     private void HandleBackNavigationClick()
     {
-        Logger.LogInformation("Back navigation clicked >>>>> ",
-        HttpContextAccessor.HttpContext?.Request.Headers["Referer"].ToString());
+        HttpContextAccessor.HttpContext?.Request.Headers["Referer"].ToString();
         NavigationManager.NavigateTo(HttpContextAccessor.HttpContext?.Request.Headers["Referer"].ToString() ?? "/");
     }
 
     private void TogglePasswordVisibility()
     {
-        Logger.LogInformation("Toggling password visibility");
         showPassword = !showPassword;
     }
     private void ToggleConfirmPasswordVisibility() => showConfirmPassword = !showConfirmPassword;

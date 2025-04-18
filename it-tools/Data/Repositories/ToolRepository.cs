@@ -39,8 +39,8 @@ public class ToolRepository(IDbContextFactory<ApplicationDbContext> contextFacto
                 Group = new ToolGroupDto
                 {
                     Id = tool.GroupId,
-                    Name = tool.Group.Name,
-                    Description = tool.Group.Description
+                    Name = tool.Group?.Name ?? string.Empty,
+                    Description = tool.Group?.Description ?? string.Empty
                 }
             };
         }
@@ -435,8 +435,8 @@ public class ToolRepository(IDbContextFactory<ApplicationDbContext> contextFacto
                 {
                     toolGroup = new ToolGroup
                     {
-                        Name = tool.Group.Name,
-                        Description = tool.Group.Description
+                        Name = tool.Group?.Name ?? string.Empty,
+                        Description = tool.Group?.Description ?? string.Empty
                     };
                     dbContext.ToolGroups.Add(toolGroup);
                     await dbContext.SaveChangesAsync();
@@ -445,7 +445,6 @@ public class ToolRepository(IDbContextFactory<ApplicationDbContext> contextFacto
             }
 
             await dbContext.SaveChangesAsync();
-            _logger.LogInformation("Updated tool with ID {ToolId}", tool.Id);
         }
         catch (Exception ex)
         {
@@ -482,8 +481,8 @@ public class ToolRepository(IDbContextFactory<ApplicationDbContext> contextFacto
                 Group = new ToolGroupDto
                 {
                     Id = tool.GroupId,
-                    Name = tool.Group.Name,
-                    Description = tool.Group.Description
+                    Name = tool.Group?.Name ?? string.Empty,
+                    Description = tool.Group?.Description ?? string.Empty
                 }
             };
         }

@@ -23,7 +23,6 @@ public class ToolAssemblyService
     {
         if (_loadedAssemblies.TryGetValue(dllPath, out var assembly))
         {
-            _logger.LogInformation("Returning cached assembly for: {DllPath}", dllPath);
             return assembly;
         }
 
@@ -38,13 +37,11 @@ public class ToolAssemblyService
             assembly = loadContext.LoadFromAssemblyPath(tempFilePath);
             _loadedAssemblies[dllPath] = assembly;
             _loadContexts[dllPath] = loadContext;
-            _logger.LogInformation("Loaded assembly from temporary file: {TempFilePath}", tempFilePath);
 
             // Xóa file tạm ngay sau khi load
             try
             {
                 _fileSystem.File.Delete(tempFilePath);
-                _logger.LogInformation("Deleted temporary file: {TempFilePath}", tempFilePath);
             }
             catch (Exception ex)
             {
@@ -69,7 +66,6 @@ public class ToolAssemblyService
             var assemblyName = assembly.GetName().Name ?? Guid.NewGuid().ToString();
             _loadedAssemblies[assemblyName] = assembly;
             _loadContexts[assemblyName] = loadContext;
-            _logger.LogInformation("Loaded assembly from binary data: {AssemblyName}", assemblyName);
             return assembly;
         }
         catch (Exception ex)
@@ -86,7 +82,6 @@ public class ToolAssemblyService
             try
             {
                 loadContext.Unload();
-                _logger.LogInformation("Unloaded assembly with key: {Key}", key);
             }
             catch (Exception ex)
             {
@@ -116,7 +111,6 @@ public class ToolAssemblyService
                     {
                         using (var stream = _fileSystem.File.Open(key, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
                         {
-                            _logger.LogInformation("File {Key} is no longer locked after {Attempts} attempts", key, i + 1);
                             isFileUnlocked = true;
                             break;
                         }
@@ -149,7 +143,6 @@ public class ToolAssemblyService
         string cacheKey = $"{assembly.FullName}:{slug}";
         if (_componentTypeCache.TryGetValue(cacheKey, out var cachedType))
         {
-            _logger.LogInformation("Returning cached component type for cache key: {CacheKey}", cacheKey);
             return cachedType;
         }
 
@@ -165,7 +158,6 @@ public class ToolAssemblyService
             {
                 var componentType = attributeMarkedTypes.First();
                 _componentTypeCache[cacheKey] = componentType;
-                _logger.LogInformation("Found component type with ToolComponentAttribute: {ComponentType}", componentType.FullName);
                 return componentType;
             }
 
@@ -185,11 +177,10 @@ public class ToolAssemblyService
                 {
                     try
                     {
-                        if (Activator.CreateInstance(type) is ITool tool && 
+                        if (Activator.CreateInstance(type) is ITool tool &&
                             tool.Slug.Equals(slug, StringComparison.OrdinalIgnoreCase))
                         {
                             _componentTypeCache[cacheKey] = type;
-                            _logger.LogInformation("Found component type matching slug {Slug}: {ComponentType}", slug, type.FullName);
                             return type;
                         }
                     }
@@ -205,25 +196,22 @@ public class ToolAssemblyService
             {
                 var componentType = toolTypes.First();
                 _componentTypeCache[cacheKey] = componentType;
-                _logger.LogInformation("Found single component type: {ComponentType}", componentType.FullName);
                 return componentType;
             }
 
             var assemblyName = assembly.GetName().Name;
-            var matchingType = toolTypes.FirstOrDefault(t => 
+            var matchingType = toolTypes.FirstOrDefault(t =>
                 t.Name.Equals(assemblyName, StringComparison.OrdinalIgnoreCase) ||
                 t.Name.Contains(assemblyName?.Replace("Tool", "") ?? "", StringComparison.OrdinalIgnoreCase));
-            
+
             if (matchingType != null)
             {
                 _componentTypeCache[cacheKey] = matchingType;
-                _logger.LogInformation("Found matching component type: {ComponentType}", matchingType.FullName);
                 return matchingType;
             }
 
             var firstType = toolTypes.First();
             _componentTypeCache[cacheKey] = firstType;
-            _logger.LogInformation("Defaulted to first component type: {ComponentType}", firstType.FullName);
             return firstType;
         }
         catch (Exception ex)
@@ -244,11 +232,10 @@ public class ToolAssemblyService
                 .ToList();
 
             Type? toolType = null;
-            
+
             if (attributeMarkedTypes.Count > 0)
             {
                 toolType = attributeMarkedTypes.First();
-                _logger.LogInformation("Extracting metadata using ToolComponentAttribute: {ToolType}", toolType.FullName);
             }
             else
             {
@@ -264,19 +251,17 @@ public class ToolAssemblyService
                 if (toolTypes.Count == 1)
                 {
                     toolType = toolTypes.First();
-                    _logger.LogInformation("Extracting metadata from single tool type: {ToolType}", toolType.FullName);
                 }
                 else
                 {
                     var assemblyName = assembly.GetName().Name;
-                    toolType = toolTypes.FirstOrDefault(t => 
+                    toolType = toolTypes.FirstOrDefault(t =>
                         t.Name.Equals(assemblyName, StringComparison.OrdinalIgnoreCase) ||
-                        t.Name.Contains(assemblyName?.Replace("Tool", "") ?? "", StringComparison.OrdinalIgnoreCase)) 
+                        t.Name.Contains(assemblyName?.Replace("Tool", "") ?? "", StringComparison.OrdinalIgnoreCase))
                         ?? toolTypes.First();
-                    _logger.LogInformation("Extracting metadata from selected tool type: {ToolType}", toolType.FullName);
                 }
             }
-            
+
             if (Activator.CreateInstance(toolType) is ITool tool)
             {
                 return new ToolDto
@@ -293,7 +278,7 @@ public class ToolAssemblyService
                     }
                 };
             }
-            
+
             throw new InvalidOperationException("Không thể tạo instance của Tool component");
         }
         catch (Exception ex)

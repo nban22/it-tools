@@ -122,7 +122,6 @@
     private void HandleFileSelected(InputFileChangeEventArgs e)
     {
         selectedFile = e.File;
-        Logger.LogInformation("File selected: {FileName}", selectedFile.Name);
         showError = false;
     }
 
@@ -133,7 +132,7 @@
             SetError("No file selected. Please choose a DLL file.");
             return;
         }
-        
+
         if (selectedFile.Size > 10 * 1024 * 1024)
         {
             SetError("File is too large. Please select a file smaller than 10MB.");
@@ -150,7 +149,7 @@
         {
             isUploading = true;
             uploadedTool = await ToolService.UploadToolAsync(selectedFile);
-            
+
             if (uploadedTool == null)
             {
                 SetError("Failed to process the uploaded tool. Please check the file contents and try again.");
@@ -163,7 +162,7 @@
         {
             SetError("A tool with the same slug already exists. Please delete the existing tool or use a different tool.");
         }
-        catch (UnauthorizedAccessException ex)
+        catch (UnauthorizedAccessException)
         {
             SetError("Access denied while processing the tool. The server may not have permission to delete files in ToolPlugins, or the file is locked.");
         }

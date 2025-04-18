@@ -5,7 +5,8 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using it_tools.Components.Auth;
 using it_tools.Data.Services;
 using it_tools.Data.Repositories;
-using System.IO.Abstractions; // Thêm namespace
+using System.IO.Abstractions;
+using Microsoft.Extensions.DependencyInjection; // Thêm namespace
 
 var builder = WebApplication.CreateBuilder(args);
 

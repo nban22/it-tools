@@ -60,8 +60,6 @@ public class ToolService : IToolService
             {
                 throw new IOException("Không thể xác minh file DLL đã lưu");
             }
-            _logger.LogInformation("Saved file verified. Size: {FileSize} bytes, Last write time: {LastWriteTime}",
-                fileInfo.Length, fileInfo.LastWriteTime);
 
             Assembly? assembly = null;
             try
@@ -80,7 +78,6 @@ public class ToolService : IToolService
                 var existingTool = await _toolRepository.GetToolBySlugAsync(toolDto.Slug ?? throw new InvalidOperationException("Tool slug cannot be null."));
                 if (existingTool != null)
                 {
-                    _logger.LogInformation("Tool with slug {Slug} already exists. Updating existing tool.", toolDto.Slug);
                     if (!string.IsNullOrEmpty(existingTool.DllPath))
                     {
                         string oldToolPath = Path.GetDirectoryName(existingTool.DllPath) ?? string.Empty;
@@ -103,7 +100,6 @@ public class ToolService : IToolService
                 else
                 {
                     var savedTool = await _toolRepository.AddToolAsync(toolDto, toolDto.Group);
-                    _logger.LogInformation("Successfully added new tool with slug {Slug}", savedTool.Slug);
                     return savedTool;
                 }
             }
@@ -131,14 +127,12 @@ public class ToolService : IToolService
                     ex.InnerException.GetType().Name, ex.InnerException.Message);
             }
 
-            _logger.LogInformation("Cleaning up tool folder: {ToolFolder}", toolFolder);
             try
             {
                 if (_fileSystem.Directory.Exists(toolFolder))
                 {
                     await _toolAssemblyService.UnloadToolAssemblyAsync(dllPath); // Đảm bảo unload trước khi xóa
                     _fileSystem.Directory.Delete(toolFolder, true);
-                    _logger.LogInformation("Tool folder cleanup successful");
                 }
             }
             catch (Exception cleanupEx)
@@ -175,16 +169,13 @@ public class ToolService : IToolService
                 return false;
             }
 
-            _logger.LogInformation("Successfully deleted tool with ID {ToolId} from database", toolId);
 
             if (!string.IsNullOrEmpty(toolPath) && _fileSystem.Directory.Exists(toolPath))
             {
                 await ScheduleFolderDeletionAsync(toolPath);
-                _logger.LogInformation("Scheduled deletion for tool folder: {ToolPath}", toolPath);
             }
             else
             {
-                _logger.LogInformation("No tool folder to schedule for deletion for tool ID {ToolId}", toolId);
             }
 
             return true;
@@ -202,7 +193,6 @@ public class ToolService : IToolService
         {
             string pendingFile = Path.Combine(_environment.ContentRootPath, "pending-deletions.txt");
             await _fileSystem.File.AppendAllTextAsync(pendingFile, toolPath + Environment.NewLine);
-            _logger.LogInformation("Scheduled folder deletion: {ToolPath}", toolPath);
         }
         catch (Exception ex)
         {

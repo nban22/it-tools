@@ -77,7 +77,6 @@
 
     private void HandleBackNavigationClick()
     {
-        Logger.LogInformation("Back navigation clicked >>>>> ", HttpContextAccessor.HttpContext?.Request.Headers["Referer"].ToString());
         NavigationManager.NavigateTo(HttpContextAccessor.HttpContext?.Request.Headers["Referer"].ToString() ?? "/");
     }
 
