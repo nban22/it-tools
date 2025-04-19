@@ -1,0 +1,342 @@
+﻿@using it_tools.ToolDevelopment.Base
+@using it_tools.ToolDevelopment.Attributes
+@using Microsoft.JSInterop
+@inject IJSRuntime JSRuntime
+@inherits ToolComponentBase
+
+<div class="p-8 bg-gradient-to-br from-gray-50 to-gray-200 min-h-screen flex items-center justify-center">
+    <div class="max-w-2xl w-full">
+        <!-- Header -->
+        <div class="flex items-center justify-between mb-10 animate-fade-in">
+            <div>
+                <h2 class="text-4xl font-extrabold text-gray-900 tracking-tight animate-pulse-short">@Name</h2>
+                <p class="text-gray-600 mt-3 text-lg font-medium">@Description</p>
+            </div>
+            <div class="text-gray-500 text-3xl animate-bounce">@Icon</div>
+        </div>
+
+        <!-- Input Section -->
+        <div class="bg-white p-10 rounded-3xl shadow-2xl mb-8 animate-slide-in">
+            <div class="space-y-8">
+                <div class="relative">
+                    <label class="block text-sm font-semibold text-gray-700 mb-3 tracking-wide">Upper Limit (1-1000):</label>
+                    <input type="number" @bind="_number" @bind:after="ValidateInput" min="1" max="1000" class="w-full px-6 py-4 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-indigo-400 focus:border-indigo-500 transition-all duration-300 bg-gray-50/80 backdrop-blur-sm shadow-inner text-gray-800 placeholder-gray-400 text-lg" placeholder="e.g., 100" />
+                    <span class="absolute inset-y-0 right-0 flex items-center pr-5 mt-12">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-400 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                        </svg>
+                    </span>
+                    @if (_hasSubmitted && _errorMessage != null)
+                    {
+                        <p class="text-red-500 text-sm mt-2 animate-pulse font-medium">@_errorMessage</p>
+                    }
+                </div>
+
+                <!-- Generate Button -->
+                <div class="text-center">
+                    <button @onclick="GenerateLists" disabled="@_isGenerating" class="relative px-10 py-4 bg-gradient-to-r from-indigo-600 to-blue-600 text-white font-semibold rounded-xl hover:from-indigo-700 hover:to-blue-700 transition-all duration-500 shadow-xl hover:shadow-2xl transform hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto overflow-hidden group">
+                        @if (_isGenerating)
+                        {
+                            <span class="flex items-center justify-center relative z-10">
+                                <svg class="animate-spin h-6 w-6 mr-3 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                Generating...
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="relative z-10">Generate Lists</span>
+                        }
+                        <span class="absolute inset-0 bg-gradient-to-r from-blue-600 to-indigo-600 opacity-0 group-hover:opacity-30 transition-opacity duration-500"></span>
+                        <span class="absolute top-0 left-0 w-0 h-full bg-white/20 transition-all duration-500 group-hover:w-full"></span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results Section -->
+        @if (_primeNumbers.Any() || _squareNumbers.Any())
+        {
+            <div class="bg-white p-10 rounded-3xl shadow-2xl animate-slide-up">
+                <div class="flex items-center justify-between mb-8">
+                    <h3 class="text-2xl font-bold text-gray-800 tracking-tight animate-pulse-short">Results for Numbers up to @_number</h3>
+                    <button @onclick="CopyResults" disabled="@_isCopying" class="flex items-center px-6 py-3 bg-gradient-to-r from-green-600 to-green-500 text-white font-semibold rounded-lg hover:from-green-700 hover:to-green-600 transition-all duration-300 shadow-md transform hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2 animate-bounce" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                        </svg>
+                        @if (_isCopying)
+                        {
+                            <span>Copying...</span>
+                        }
+                        else
+                        {
+                            <span>Copy Results</span>
+                        }
+                    </button>
+                </div>
+
+                <!-- Prime Numbers -->
+                @if (_primeNumbers.Any())
+                {
+                    <div class="mb-10">
+                        <h4 class="text-xl font-semibold text-gray-700 mb-5 flex items-center">
+                            <span class="inline-block w-5 h-5 bg-indigo-600 rounded-full mr-3 animate-pulse"></span>
+                            Prime Numbers (@_primeNumbers.Count)
+                        </h4>
+                        <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-4">
+                            @foreach (var prime in _primeNumbers)
+                            {
+                                <div class="p-4 bg-indigo-50 rounded-xl text-center text-gray-800 font-medium transform transition-all duration-300 hover:scale-105 hover:bg-indigo-100 animate-pop-in">
+                                    @prime
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <div class="mb-10">
+                        <h4 class="text-xl font-semibold text-gray-700 mb-5 flex items-center">
+                            <span class="inline-block w-5 h-5 bg-indigo-600 rounded-full mr-3 animate-pulse"></span>
+                            Prime Numbers (0)
+                        </h4>
+                        <p class="text-gray-500 italic text-center">No prime numbers found.</p>
+                    </div>
+                }
+
+                <!-- Square Numbers -->
+                @if (_squareNumbers.Any())
+                {
+                    <div>
+                        <h4 class="text-xl font-semibold text-gray-700 mb-5 flex items-center">
+                            <span class="inline-block w-5 h-5 bg-blue-600 rounded-full mr-3 animate-pulse"></span>
+                            Square Numbers (@_squareNumbers.Count)
+                        </h4>
+                        <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-4">
+                            @foreach (var square in _squareNumbers)
+                            {
+                                <div class="p-4 bg-blue-50 rounded-xl text-center text-gray-800 font-medium transform transition-all duration-300 hover:scale-105 hover:bg-blue-100 animate-pop-in">
+                                    @square
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <div>
+                        <h4 class="text-xl font-semibold text-gray-700 mb-5 flex items-center">
+                            <span class="inline-block w-5 h-5 bg-blue-600 rounded-full mr-3 animate-pulse"></span>
+                            Square Numbers (0)
+                        </h4>
+                        <p class="text-gray-500 italic text-center">No square numbers found.</p>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+<!-- Toast Notification -->
+@if (_showToast)
+{
+    <div class="fixed bottom-8 right-8 z-50 animate-toast-in">
+        <div class="flex items-center bg-@(_toastSuccess ? "green" : "red")-600 text-white px-6 py-4 rounded-xl shadow-2xl backdrop-blur-sm">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 mr-3 animate-bounce" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="@(_toastSuccess ? "M5 13l4 4L19 7" : "M6 18L18 6M6 6l12 12")" />
+            </svg>
+            <span class="font-medium">@_toastMessage</span>
+        </div>
+    </div>
+}
+
+<style>
+    @@keyframes fadeIn {
+        0% { opacity: 0; transform: translateY(20px); }
+        100% { opacity: 1; transform: translateY(0); }
+    }
+
+    @@keyframes slideIn {
+        0% { opacity: 0; transform: translateY(-30px); }
+        100% { opacity: 1; transform: translateY(0); }
+    }
+
+    @@keyframes slideUp {
+        0% { opacity: 0; transform: translateY(40px); }
+        100% { opacity: 1; transform: translateY(0); }
+    }
+
+    @@keyframes popIn {
+        0% { transform: scale(0.7); opacity: 0; }
+        80% { transform: scale(1.1); opacity: 1; }
+        100% { transform: scale(1); opacity: 1; }
+    }
+
+    @@keyframes toastIn {
+        0% { opacity: 0; transform: translateX(30px); }
+        100% { opacity: 1; transform: translateX(0); }
+    }
+
+    @@keyframes toastOut {
+        0% { opacity: 1; transform: translateX(0); }
+        100% { opacity: 0; transform: translateX(30px); }
+    }
+
+    @@keyframes pulseShort {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+    }
+
+    .animate-fade-in {
+        animation: fadeIn 0.8s ease-in-out;
+    }
+
+    .animate-slide-in {
+        animation: slideIn 0.7s ease-in-out;
+    }
+
+    .animate-slide-up {
+        animation: slideUp 0.9s ease-in-out;
+    }
+
+    .animate-pop-in {
+        animation: popIn 0.4s ease-out forwards;
+    }
+
+    .animate-toast-in {
+        animation: toastIn 0.5s ease-in-out;
+    }
+
+    .animate-toast-out {
+        animation: toastOut 0.5s ease-in-out forwards;
+    }
+
+    .animate-pulse-short {
+        animation: pulseShort 2s ease-in-out infinite;
+    }
+</style>
+
+@code {
+    private int _number { get; set; }
+    private List<int> _primeNumbers { get; set; } = new();
+    private List<int> _squareNumbers { get; set; } = new();
+    private bool _hasSubmitted { get; set; }
+    private bool _isGenerating { get; set; }
+    private bool _isCopying { get; set; }
+    private bool _showToast { get; set; }
+    private bool _toastSuccess { get; set; }
+    private string _toastMessage { get; set; } = "";
+    private string? _errorMessage { get; set; }
+
+    public override string Name => "Prime & Square Numbers Lister";
+    public override string Description => "Generate lists of prime and perfect square numbers up to a specified limit.";
+    public override string Slug => "prime-square-numbers";
+    public override string Group => "Math Tools";
+    public override string Icon => "🔢";
+
+    private async Task ValidateInput()
+    {
+        _errorMessage = null;
+        if (_number < 1 || _number > 1000)
+        {
+            _errorMessage = "Number must be between 1 and 1000.";
+        }
+        await Task.CompletedTask;
+    }
+
+    private async Task GenerateLists()
+    {
+        _hasSubmitted = true;
+        _primeNumbers.Clear();
+        _squareNumbers.Clear();
+        _errorMessage = null;
+
+        if (_number < 1 || _number > 1000)
+        {
+            _errorMessage = "Number must be between 1 and 1000.";
+            await ShowToast(false, _errorMessage);
+            return;
+        }
+
+        _isGenerating = true;
+        try
+        {
+            await Task.Delay(500); // Simulate processing for UX
+            // Generate prime numbers
+            for (int i = 2; i <= _number; i++)
+            {
+                if (IsPrime(i))
+                {
+                    _primeNumbers.Add(i);
+                }
+            }
+
+            // Generate square numbers
+            for (int i = 1; i * i <= _number; i++)
+            {
+                _squareNumbers.Add(i * i);
+            }
+
+            await ShowToast(true, "Lists generated successfully!");
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Error generating lists: {ex.Message}";
+            await ShowToast(false, _errorMessage);
+        }
+        finally
+        {
+            _isGenerating = false;
+            StateHasChanged();
+        }
+    }
+
+    private bool IsPrime(int number)
+    {
+        if (number < 2) return false;
+        for (int i = 2; i <= Math.Sqrt(number); i++)
+        {
+            if (number % i == 0) return false;
+        }
+        return true;
+    }
+
+    private async Task CopyResults()
+    {
+        if (!_primeNumbers.Any() && !_squareNumbers.Any())
+        {
+            await ShowToast(false, "No results to copy.");
+            return;
+        }
+
+        _isCopying = true;
+        try
+        {
+            string resultText = $"Numbers up to {_number}\n\nPrime Numbers ({_primeNumbers.Count}):\n{(_primeNumbers.Any() ? string.Join(", ", _primeNumbers) : "None")}\n\nSquare Numbers ({_squareNumbers.Count}):\n{(_squareNumbers.Any() ? string.Join(", ", _squareNumbers) : "None")}";
+            await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", resultText);
+            await ShowToast(true, "Results copied to clipboard!");
+        }
+        catch (Exception ex)
+        {
+            await ShowToast(false, $"Error copying results: {ex.Message}");
+        }
+        finally
+        {
+            _isCopying = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task ShowToast(bool success, string message)
+    {
+        _toastSuccess = success;
+        _toastMessage = message;
+        _showToast = true;
+        StateHasChanged();
+        await Task.Delay(4000);
+        _showToast = false;
+        StateHasChanged();
+    }
+}
