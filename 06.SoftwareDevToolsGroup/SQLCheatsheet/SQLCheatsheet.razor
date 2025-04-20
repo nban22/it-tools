@@ -1,0 +1,389 @@
+﻿@using it_tools.ToolDevelopment.Base
+@using it_tools.ToolDevelopment.Attributes
+@using Microsoft.JSInterop
+@inject IJSRuntime JSRuntime
+@inherits ToolComponentBase
+
+<div class="p-10 bg-gradient-to-br from-gray-100 to-gray-300 min-h-screen flex items-center justify-center">
+    <div class="max-w-5xl w-full">
+        <!-- Header -->
+        <div class="flex items-center justify-between mb-12 animate-fade-in">
+            <div>
+                <h2 class="text-4xl font-extrabold text-gray-900 tracking-tight animate-pulse-short">@Name</h2>
+                <p class="text-gray-600 mt-3 text-lg font-medium">@Description</p>
+            </div>
+            <div class="text-gray-500 text-4xl animate-bounce">@Icon</div>
+        </div>
+
+        <!-- Cheatsheet Container -->
+        <div class="bg-white p-12 rounded-3xl shadow-2xl animate-slide-in">
+            <div class="flex flex-col sm:flex-row items-center justify-between mb-10 gap-4">
+                <h3 class="text-3xl font-bold text-gray-800 tracking-tight flex items-center">
+                    <span class="inline-block w-5 h-5 bg-blue-600 rounded-full mr-3 animate-pulse"></span>
+                    SQL Cheatsheet
+                </h3>
+                <div class="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4 w-full sm:w-auto">
+                    <!-- Search Bar -->
+                    <div class="relative w-full sm:w-64">
+                        <input type="text" 
+                               @bind="_searchQuery" 
+                               @bind:event="oninput" 
+                               placeholder="Search commands..." 
+                               aria-label="Search SQL commands"
+                               class="w-full px-5 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-indigo-400 focus:border-indigo-500 transition-all duration-300 bg-gray-50/80 backdrop-blur-sm shadow-inner text-gray-800 placeholder-gray-400 text-sm" />
+                        <span class="absolute inset-y-0 right-0 flex items-center pr-4">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            </svg>
+                        </span>
+                    </div>
+                    <!-- Action Buttons -->
+                    <div class="flex space-x-4">
+                        <button @onclick="@(e => ResetSearch())" 
+                                class="flex items-center px-4 py-2 bg-gradient-to-r from-red-600 to-red-500 text-white rounded-lg hover:from-red-700 hover:to-red-600 transition-all duration-300 shadow-md transform hover:-translate-y-1"
+                                aria-label="Reset search">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                            Reset
+                        </button>
+                        <button @onclick="@(e => CopyCheatsheet())" 
+                                disabled="@_isCopying" 
+                                class="flex items-center px-6 py-3 bg-gradient-to-r from-green-600 to-green-500 text-white font-semibold rounded-lg hover:from-green-700 hover:to-green-600 transition-all duration-300 shadow-md transform hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                                aria-label="Copy entire cheatsheet">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2 animate-bounce" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                            </svg>
+                            @if (_isCopying)
+                            {
+                                <span>Copying...</span>
+                            }
+                            else
+                            {
+                                <span>Copy Cheatsheet</span>
+                            }
+                        </button>
+                        <button @onclick="@(e => ToggleTheme())" 
+                                class="flex items-center px-4 py-2 bg-gradient-to-r from-gray-600 to-gray-500 text-white rounded-lg hover:from-gray-700 hover:to-gray-600 transition-all duration-300 shadow-md transform hover:-translate-y-1"
+                                aria-label="Toggle theme">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                            </svg>
+                            @(_isDarkTheme ? "Light Theme" : "Dark Theme")
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cheatsheet Sections -->
+            @if (_filteredCheatsheetItems.Any())
+            {
+                @foreach (var section in _filteredCheatsheetItems.GroupBy(i => i.Category))
+                {
+                    <div class="animate-slide-up mb-12" @key="section.Key">
+<h4 class="text-xl font-semibold text-gray-700 mb-6 flex items-center">
+    <span class="inline-block w-4 h-4 bg-blue-500 rounded-full mr-3 animate-pulse"></span>
+    @(section.Key)
+</h4>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                            @foreach (var item in section)
+                            {
+                                <div @key="item.Command" 
+                                     class="p-5 bg-blue-50 rounded-xl flex flex-col justify-between transform transition-all duration-300 hover:scale-102 hover:bg-blue-100 animate-pop-in @_themeClass group relative"
+                                     role="region" 
+                                     aria-label="@item.Command details">
+                                    <div class="flex justify-between items-start">
+                                        <span class="font-mono text-gray-800 font-semibold">@item.Command</span>
+                                        <button @onclick="@(e => CopySingleCommand(item))" 
+                                                class="opacity-0 group-hover:opacity-100 transition-opacity duration-300 text-green-500 hover:text-green-700"
+                                                aria-label="Copy @item.Command"
+                                                title="Copy this command">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                            </svg>
+                                        </button>
+                                    </div>
+                                    <span class="text-gray-600 text-sm mt-2">@((MarkupString)item.Description)</span>
+                                    <span class="text-gray-500 text-xs mt-2 italic">@item.Example</span>
+                                    <div class="absolute top-0 right-0 p-2 bg-gray-800 text-white text-xs rounded-bl-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                        @item.Tooltip
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+            }
+            else
+            {
+                <div class="text-center text-gray-500 italic animate-fade-in" role="alert">
+                    No commands found matching your search.
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Toast Notification -->
+@if (_showToast)
+{
+    <div class="fixed bottom-10 right-10 z-50 animate-toast-in" role="alert" aria-live="polite">
+        <div class="flex items-center bg-@(_toastSuccess ? "green" : "red")-600 text-white px-6 py-4 rounded-xl shadow-2xl backdrop-blur-sm">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 mr-3 animate-bounce" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="@(_toastSuccess ? "M5 13l4 4L19 7" : "M6 18L18 6M6 6l12 12")" />
+            </svg>
+            <span class="font-medium text-lg">@_toastMessage</span>
+        </div>
+    </div>
+}
+
+<style>
+    @@keyframes fadeIn {
+        0% { opacity: 0; transform: translateY(30px); }
+        100% { opacity: 1; transform: translateY(0); }
+    }
+
+    @@keyframes slideIn {
+        0% { opacity: 0; transform: translateY(-40px); }
+        100% { opacity: 1; transform: translateY(0); }
+    }
+
+    @@keyframes slideUp {
+        0% { opacity: 0; transform: translateY(50px); }
+        100% { opacity: 1; transform: translateY(0); }
+    }
+
+    @@keyframes popIn {
+        0% { transform: scale(0.7); opacity: 0; }
+        80% { transform: scale(1.15); opacity: 1; }
+        100% { transform: scale(1); opacity: 1; }
+    }
+
+    @@keyframes toastIn {
+        0% { opacity: 0; transform: translateX(40px); }
+        100% { opacity: 1; transform: translateX(0); }
+    }
+
+    @@keyframes toastOut {
+        0% { opacity: 1; transform: translateX(0); }
+        100% { opacity: 0; transform: translateX(40px); }
+    }
+
+    @@keyframes pulseShort {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+    }
+
+    .animate-fade-in {
+        animation: fadeIn 0.8s ease-in-out;
+    }
+
+    .animate-slide-in {
+        animation: slideIn 0.7s ease-in-out;
+    }
+
+    .animate-slide-up {
+        animation: slideUp 0.9s ease-in-out;
+    }
+
+    .animate-pop-in {
+        animation: popIn 0.5s ease-out forwards;
+    }
+
+    .animate-toast-in {
+        animation: toastIn 0.5s ease-in-out;
+    }
+
+    .animate-toast-out {
+        animation: toastOut 0.5s ease-in-out forwards;
+    }
+
+    .animate-pulse-short {
+        animation: pulseShort 2s ease-in-out infinite;
+    }
+
+    .dark-theme {
+        background-color: #1f2937 !important;
+        color: #e5e7eb !important;
+    }
+
+    .dark-theme .text-gray-800 {
+        color: #e5e7eb !important;
+    }
+
+    .dark-theme .text-gray-600 {
+        color: #d1d5db !important;
+    }
+
+    .dark-theme .text-gray-500 {
+        color: #9ca3af !important;
+    }
+
+    .group:hover .group-hover\:opacity-100 {
+        opacity: 1 !important;
+    }
+</style>
+
+@code {
+    private bool _isCopying { get; set; }
+    private bool _showToast { get; set; }
+    private bool _toastSuccess { get; set; }
+    private string _toastMessage { get; set; } = "";
+    private bool _isDarkTheme { get; set; }
+    private string _themeClass => _isDarkTheme ? "dark-theme" : "";
+    private string _searchQuery { get; set; } = "";
+    private List<CheatsheetItem> _cheatsheetItems { get; set; } = new();
+    private List<CheatsheetItem> _filteredCheatsheetItems => string.IsNullOrWhiteSpace(_searchQuery)
+        ? _cheatsheetItems
+        : _cheatsheetItems.Where(i => i.Command.ToLower().Contains(_searchQuery.ToLower()) || i.Description.ToLower().Contains(_searchQuery.ToLower())).ToList();
+
+    public override string Name => "SQL Cheatsheet";
+    public override string Description => "A comprehensive reference guide for SQL commands, syntax, and examples with search functionality.";
+    public override string Slug => "sql-cheatsheet";
+    public override string Group => "Software Development Tools";
+    public override string Icon => "📋";
+
+    protected override void OnInitialized()
+    {
+        _cheatsheetItems = new List<CheatsheetItem>
+        {
+            // Basic SQL Commands
+            new CheatsheetItem("Basic SQL Commands", "SELECT", "Retrieve data from tables (e.g., <code>SELECT * FROM table</code>)", "Example: SELECT name, age FROM users;", "Use to query specific columns or all data from a table"),
+            new CheatsheetItem("Basic SQL Commands", "INSERT", "Add new rows (e.g., <code>INSERT INTO table (col1, col2) VALUES (val1, val2)</code>)", "Example: INSERT INTO users (name, age) VALUES ('John', 30);", "Inserts new records into a table"),
+            new CheatsheetItem("Basic SQL Commands", "UPDATE", "Modify existing data (e.g., <code>UPDATE table SET col = val WHERE condition</code>)", "Example: UPDATE users SET age = 31 WHERE name = 'John';", "Updates existing records based on a condition"),
+            new CheatsheetItem("Basic SQL Commands", "DELETE", "Remove rows (e.g., <code>DELETE FROM table WHERE condition</code>)", "Example: DELETE FROM users WHERE age < 18;", "Deletes records that match the condition"),
+
+            // Filtering and Sorting
+            new CheatsheetItem("Filtering and Sorting", "WHERE", "Filter rows based on conditions (e.g., <code>WHERE col = val</code>)", "Example: SELECT * FROM users WHERE age > 25;", "Narrows down query results"),
+            new CheatsheetItem("Filtering and Sorting", "ORDER BY", "Sort results (e.g., <code>ORDER BY col ASC/DESC</code>)", "Example: SELECT * FROM users ORDER BY age DESC;", "Sorts query results by specified columns"),
+            new CheatsheetItem("Filtering and Sorting", "GROUP BY", "Group rows by column values (e.g., <code>GROUP BY col</code>)", "Example: SELECT dept, COUNT(*) FROM employees GROUP BY dept;", "Aggregates data by groups"),
+            new CheatsheetItem("Filtering and Sorting", "HAVING", "Filter grouped rows (e.g., <code>HAVING COUNT(*) > 5</code>)", "Example: SELECT dept, COUNT(*) FROM employees GROUP BY dept HAVING COUNT(*) > 10;", "Filters groups after GROUP BY"),
+            new CheatsheetItem("Filtering and Sorting", "LIKE", "Pattern matching (e.g., <code>WHERE col LIKE '%pattern%'</code>)", "Example: SELECT * FROM users WHERE name LIKE 'J%';", "Searches for patterns in text data"),
+            new CheatsheetItem("Filtering and Sorting", "IN", "Match any value in a list (e.g., <code>WHERE col IN (val1, val2)</code>)", "Example: SELECT * FROM users WHERE id IN (1, 2, 3);", "Filters rows matching a set of values"),
+
+            // Joins
+            new CheatsheetItem("Joins", "INNER JOIN", "Matching rows from both tables", "Example: SELECT * FROM users INNER JOIN orders ON users.id = orders.user_id;", "Returns only matched rows"),
+            new CheatsheetItem("Joins", "LEFT JOIN", "All rows from left table, matching rows from right", "Example: SELECT * FROM users LEFT JOIN orders ON users.id = orders.user_id;", "Includes all left table rows"),
+            new CheatsheetItem("Joins", "RIGHT JOIN", "All rows from right table, matching rows from left", "Example: SELECT * FROM users RIGHT JOIN orders ON users.id = orders.user_id;", "Includes all right table rows"),
+            new CheatsheetItem("Joins", "FULL JOIN", "All rows from both tables", "Example: SELECT * FROM users FULL JOIN orders ON users.id = orders.user_id;", "Includes all rows from both tables"),
+            new CheatsheetItem("Joins", "CROSS JOIN", "Cartesian product of both tables", "Example: SELECT * FROM users CROSS JOIN products;", "Combines all rows from both tables"),
+
+            // Aggregate Functions
+            new CheatsheetItem("Aggregate Functions", "COUNT", "Count rows or non-null values (e.g., <code>COUNT(*)</code>)", "Example: SELECT COUNT(*) FROM users;", "Counts total rows or specific values"),
+            new CheatsheetItem("Aggregate Functions", "SUM", "Sum of numeric values (e.g., <code>SUM(col)</code>)", "Example: SELECT SUM(salary) FROM employees;", "Calculates total of a numeric column"),
+            new CheatsheetItem("Aggregate Functions", "AVG", "Average of numeric values (e.g., <code>AVG(col)</code>)", "Example: SELECT AVG(salary) FROM employees;", "Computes average of a numeric column"),
+            new CheatsheetItem("Aggregate Functions", "MAX", "Maximum value (e.g., <code>MAX(col)</code>)", "Example: SELECT MAX(salary) FROM employees;", "Finds the highest value"),
+            new CheatsheetItem("Aggregate Functions", "MIN", "Minimum value (e.g., <code>MIN(col)</code>)", "Example: SELECT MIN(salary) FROM employees;", "Finds the lowest value"),
+
+            // Table Operations
+            new CheatsheetItem("Table Operations", "CREATE TABLE", "Define a new table (e.g., <code>CREATE TABLE table (col TYPE)</code>)", "Example: CREATE TABLE users (id INT, name VARCHAR(50));", "Creates a new table structure"),
+            new CheatsheetItem("Table Operations", "ALTER TABLE", "Modify table structure (e.g., <code>ALTER TABLE table ADD col TYPE</code>)", "Example: ALTER TABLE users ADD email VARCHAR(100);", "Modifies existing table"),
+            new CheatsheetItem("Table Operations", "DROP TABLE", "Delete a table (e.g., <code>DROP TABLE table</code>)", "Example: DROP TABLE users;", "Removes a table and its data"),
+            new CheatsheetItem("Table Operations", "TRUNCATE TABLE", "Remove all rows from a table", "Example: TRUNCATE TABLE users;", "Clears all data while keeping structure"),
+
+            // Constraints
+            new CheatsheetItem("Constraints", "PRIMARY KEY", "Uniquely identifies each row", "Example: id INT PRIMARY KEY", "Ensures unique row identification"),
+            new CheatsheetItem("Constraints", "FOREIGN KEY", "Links to primary key in another table", "Example: user_id INT REFERENCES users(id)", "Maintains referential integrity"),
+            new CheatsheetItem("Constraints", "UNIQUE", "Ensures all values in a column are unique", "Example: email VARCHAR(100) UNIQUE", "Prevents duplicate values"),
+            new CheatsheetItem("Constraints", "NOT NULL", "Ensures column cannot have null values", "Example: name VARCHAR(50) NOT NULL", "Requires a value for the column"),
+            new CheatsheetItem("Constraints", "CHECK", "Enforces a condition on column values", "Example: age INT CHECK (age >= 18)", "Restricts values based on a condition"),
+
+            // Advanced Queries
+            new CheatsheetItem("Advanced Queries", "SUBQUERY", "Query within a query (e.g., <code>SELECT * FROM table WHERE col IN (SELECT ...)</code>)", "Example: SELECT * FROM users WHERE id IN (SELECT user_id FROM orders);", "Nests queries for complex filtering"),
+            new CheatsheetItem("Advanced Queries", "UNION", "Combine results of multiple queries", "Example: SELECT name FROM users UNION SELECT name FROM employees;", "Merges distinct results"),
+            new CheatsheetItem("Advanced Queries", "CASE", "Conditional logic in queries", "Example: SELECT name, CASE WHEN age < 18 THEN 'Minor' ELSE 'Adult' END FROM users;", "Adds conditional logic"),
+            new CheatsheetItem("Advanced Queries", "WITH (CTE)", "Common Table Expression for temporary results", "Example: WITH temp AS (SELECT * FROM users) SELECT * FROM temp;", "Simplifies complex queries"),
+
+            // Indexes
+            new CheatsheetItem("Indexes", "CREATE INDEX", "Create an index on a column (e.g., <code>CREATE INDEX idx_name ON table(col)</code>)", "Example: CREATE INDEX idx_name ON users(name);", "Improves query performance"),
+            new CheatsheetItem("Indexes", "DROP INDEX", "Remove an index (e.g., <code>DROP INDEX idx_name</code>)", "Example: DROP INDEX idx_name;", "Deletes an existing index"),
+            new CheatsheetItem("Indexes", "CREATE UNIQUE INDEX", "Create a unique index (e.g., <code>CREATE UNIQUE INDEX idx_name ON table(col)</code>)", "Example: CREATE UNIQUE INDEX idx_email ON users(email);", "Ensures unique values with indexing"),
+
+            // Transactions
+            new CheatsheetItem("Transactions", "BEGIN TRANSACTION", "Start a transaction", "Example: BEGIN TRANSACTION;", "Initiates a transaction block"),
+            new CheatsheetItem("Transactions", "COMMIT", "Save changes in a transaction", "Example: COMMIT;", "Applies transaction changes"),
+            new CheatsheetItem("Transactions", "ROLLBACK", "Undo changes in a transaction", "Example: ROLLBACK;", "Reverts transaction changes"),
+            new CheatsheetItem("Transactions", "SAVEPOINT", "Set a point within a transaction (e.g., <code>SAVEPOINT point_name</code>)", "Example: SAVEPOINT save1;", "Allows partial rollback")
+        };
+    }
+
+    private async Task CopyCheatsheet()
+    {
+        _isCopying = true;
+        try
+        {
+            var cheatsheetText = string.Join("\n\n", _cheatsheetItems.GroupBy(i => i.Category).Select(g =>
+                $"{g.Key}\n" + string.Join("\n", g.Select(i =>
+                    $"{i.Command} - {i.Description.Replace("<code>", "").Replace("</code>", "")}\n  {i.Example}"
+                ))
+            ));
+
+            await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", cheatsheetText);
+            await ShowToast(true, "Cheatsheet copied to clipboard!");
+        }
+        catch (Exception ex)
+        {
+            await ShowToast(false, $"Error copying cheatsheet: {ex.Message}");
+        }
+        finally
+        {
+            _isCopying = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task CopySingleCommand(CheatsheetItem item)
+    {
+        try
+        {
+            var text = $"{item.Command}\n{item.Description.Replace("<code>", "").Replace("</code>", "")}\n{item.Example}";
+            await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", text);
+            await ShowToast(true, $"Command '{item.Command}' copied!");
+        }
+        catch (Exception ex)
+        {
+            await ShowToast(false, $"Error copying command: {ex.Message}");
+        }
+    }
+
+    private void ResetSearch()
+    {
+        _searchQuery = "";
+        StateHasChanged();
+    }
+
+    private void ToggleTheme()
+    {
+        _isDarkTheme = !_isDarkTheme;
+        StateHasChanged();
+    }
+
+    private async Task ShowToast(bool success, string message)
+    {
+        _toastSuccess = success;
+        _toastMessage = message;
+        _showToast = true;
+        StateHasChanged();
+        await Task.Delay(4000);
+        _showToast = false;
+        StateHasChanged();
+    }
+
+    private class CheatsheetItem
+    {
+        public string Category { get; }
+        public string Command { get; }
+        public string Description { get; }
+        public string Example { get; }
+        public string Tooltip { get; }
+
+        public CheatsheetItem(string category, string command, string description, string example, string tooltip)
+        {
+            Category = category;
+            Command = command;
+            Description = description;
+            Example = example;
+            Tooltip = tooltip;
+        }
+    }
+}
