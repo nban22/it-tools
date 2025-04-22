@@ -1,0 +1,537 @@
+﻿@using it_tools.ToolDevelopment.Base
+@using it_tools.ToolDevelopment.Attributes
+@using Microsoft.JSInterop
+@using System.Text.RegularExpressions
+@using System.Text
+@inject IJSRuntime JSRuntime
+@inherits ToolComponentBase
+
+<div class="min-h-screen bg-gradient-to-br from-gray-50 to-gray-200 p-6 md:p-10 flex items-center justify-center">
+    <div class="max-w-4xl w-full mx-auto">
+        <!-- Header -->
+        <div class="flex items-center justify-between mb-8 animate-fade-in">
+            <div>
+                <h2 class="text-3xl md:text-4xl font-extrabold text-gray-900 tracking-tight animate-pulse-short">@Name</h2>
+                <p class="text-gray-600 mt-2 text-base md:text-lg font-medium">@Description</p>
+            </div>
+            <div class="text-gray-500 text-3xl md:text-4xl animate-bounce">@Icon</div>
+        </div>
+
+        <!-- Regex Tester Form -->
+        <div class="bg-white p-6 md:p-8 rounded-2xl shadow-xl mb-8 animate-slide-up">
+            <div class="space-y-6">
+                <!-- Regex Pattern Input -->
+                <div class="relative">
+                    <label for="regex-pattern" class="block text-sm font-medium text-gray-700 mb-2 tracking-wide">
+                        Regex Pattern
+                        <span class="ml-1 text-gray-400 cursor-help" title="Enter a regular expression pattern (e.g., ^[a-zA-Z0-9]+$). Supports flags below.">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </span>
+                    </label>
+                    <input id="regex-pattern" 
+                           type="text" 
+                           @bind="RegexPattern" 
+                           @bind:event="oninput" 
+                           placeholder="e.g., ^[a-zA-Z0-9]+$" 
+                           class="w-full px-4 py-3 border-2 @(IsValidRegexPattern ? "border-gray-300" : "border-red-500") rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-blue-500 transition-all duration-300 bg-white/90 shadow-sm h-12 placeholder-gray-400 text-gray-800"
+                           aria-describedby="regex-pattern-error" />
+                    @if (!IsValidRegexPattern)
+                    {
+                        <p id="regex-pattern-error" class="text-red-500 text-xs mt-1 animate-pulse">@regexErrorMessage</p>
+                    }
+                </div>
+
+                <!-- Regex Flags -->
+                <div class="flex flex-wrap gap-4">
+                    <label class="flex items-center text-sm text-gray-700">
+                        <input type="checkbox" @bind="IsCaseInsensitive" class="mr-2 h-4 w-4 text-blue-500 focus:ring-blue-400 border-gray-300 rounded" />
+                        Case Insensitive (i)
+                    </label>
+                    <label class="flex items-center text-sm text-gray-700">
+                        <input type="checkbox" @bind="IsGlobal" class="mr-2 h-4 w-4 text-blue-500 focus:ring-blue-400 border-gray-300 rounded" />
+                        Global (g)
+                    </label>
+                    <label class="flex items-center text-sm text-gray-700">
+                        <input type="checkbox" @bind="IsMultiline" class="mr-2 h-4 w-4 text-blue-500 focus:ring-blue-400 border-gray-300 rounded" />
+                        Multiline (m)
+                    </label>
+                </div>
+
+                <!-- Test String Input -->
+                <div class="relative">
+                    <label for="test-string" class="block text-sm font-medium text-gray-700 mb-2 tracking-wide">
+                        Test String
+                        <span class="ml-1 text-gray-400 cursor-help" title="Enter text to test against the regex pattern.">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </span>
+                    </label>
+                    <textarea id="test-string" 
+                              @bind="TestString" 
+                              @bind:event="oninput" 
+                              placeholder="Enter text to test against the regex pattern..."
+                              class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-blue-500 transition-all duration-300 bg-white/90 shadow-sm min-h-[120px] placeholder-gray-400 text-gray-800 resize-y"
+                              aria-describedby="test-string-error"></textarea>
+                    @if (hasSubmitted && string.IsNullOrWhiteSpace(TestString))
+                    {
+                        <p id="test-string-error" class="text-red-500 text-xs mt-1 animate-pulse">Please enter a test string.</p>
+                    }
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="flex justify-between items-center">
+                    <button @onclick="TestRegex" 
+                            disabled="@isTesting" 
+                            class="px-6 py-3 bg-gradient-to-r from-indigo-600 to-blue-500 text-white rounded-lg hover:from-indigo-700 hover:to-blue-600 transition-all duration-300 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 disabled:opacity-50"
+                            aria-label="Test regex pattern">
+                        @(isTesting ? "Testing..." : "Test Regex")
+                    </button>
+                    <button @onclick="ClearForm" 
+                            class="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-all duration-300 shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
+                            aria-label="Clear form">
+                        Clear All
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Test Results -->
+        @if (hasTested)
+        {
+            <div class="bg-white p-6 md:p-8 rounded-2xl shadow-xl animate-slide-up">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-xl md:text-2xl font-bold text-gray-800 tracking-tight flex items-center">
+                        <span class="inline-block w-4 h-4 bg-blue-500 rounded-full mr-2 animate-pulse"></span>
+                        Regex Test Results
+                    </h3>
+                    <div class="flex space-x-3">
+                        <button @onclick="CopyResults" 
+                                disabled="@isCopying" 
+                                class="flex items-center px-4 py-2 bg-gradient-to-r from-green-600 to-green-500 text-white rounded-lg hover:from-green-700 hover:to-green-600 transition-all duration-300 shadow-md transform hover:-translate-y-0.5 disabled:opacity-50"
+                                aria-label="Copy results">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 animate-bounce" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                            </svg>
+                            @(isCopying ? "Copying..." : "Copy Results")
+                        </button>
+                        <button @onclick="ExportResults" 
+                                disabled="@isExporting" 
+                                class="flex items-center px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-500 text-white rounded-lg hover:from-blue-700 hover:to-blue-600 transition-all duration-300 shadow-md transform hover:-translate-y-0.5 disabled:opacity-50"
+                                aria-label="Export results">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 animate-bounce" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                            </svg>
+                            @(isExporting ? "Exporting..." : "Export Results")
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Highlighted Test String -->
+                <div class="mb-6">
+                    <h4 class="text-lg font-semibold text-gray-700 mb-3 flex items-center">
+                        <span class="inline-block w-3 h-3 bg-indigo-500 rounded-full mr-2 animate-pulse"></span>
+                        Test String with Matches
+                    </h4>
+                    <div class="p-3 bg-gray-50 rounded-lg text-gray-800 font-mono text-sm overflow-x-auto">
+                        @if (isMatch && matches.Any())
+                        {
+                            @((MarkupString)HighlightMatches(TestString, matches))
+                        }
+                        else
+                        {
+                            <span>@TestString</span>
+                        }
+                    </div>
+                </div>
+
+                <!-- Match Result -->
+                <div class="mb-6">
+                    <h4 class="text-lg font-semibold text-gray-700 mb-3 flex items-center">
+                        <span class="inline-block w-3 h-3 bg-blue-500 rounded-full mr-2 animate-pulse"></span>
+                        Match Result: @(isMatch ? "Match Found" : "No Match")
+                    </h4>
+                    <p class="text-gray-600 text-sm animate-fade-in-up">
+                        The test string @(isMatch ? "matches" : "does not match") the provided regex pattern.
+                    </p>
+                </div>
+
+                <!-- Matches -->
+                @if (isMatch && matches.Any())
+                {
+                    <div class="mb-6">
+                        <h4 class="text-lg font-semibold text-gray-700 mb-3 flex items-center cursor-pointer" @onclick="() => showMatches = !showMatches">
+                            <span class="inline-block w-3 h-3 bg-blue-500 rounded-full mr-2 animate-pulse"></span>
+                            Matches Found (@matches.Count)
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ml-2 transform @((showMatches ? "rotate-180" : ""))" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </h4>
+                        @if (showMatches)
+                        {
+                            <div class="grid grid-cols-1 gap-2">
+                                @foreach (var match in matches.Take(maxMatchesToShow))
+                                {
+                                    <div class="p-2 bg-blue-50 rounded-lg text-gray-800 font-mono text-sm animate-fade-in-up">
+                                        @match
+                                    </div>
+                                }
+                                @if (matches.Count > maxMatchesToShow)
+                                {
+                                    <p class="text-gray-500 text-sm mt-2">Showing @maxMatchesToShow of @matches.Count matches.</p>
+                                }
+                            </div>
+                        }
+                    </div>
+                }
+
+                <!-- Groups -->
+                @if (isMatch && groups.Any())
+                {
+                    <div>
+                        <h4 class="text-lg font-semibold text-gray-700 mb-3 flex items-center cursor-pointer" @onclick="() => showGroups = !showGroups">
+                            <span class="inline-block w-3 h-3 bg-green-500 rounded-full mr-2 animate-pulse"></span>
+                            Captured Groups (@groups.Count)
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ml-2 transform @((showGroups ? "rotate-180" : ""))" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </h4>
+                        @if (showGroups)
+                        {
+                            <div class="grid grid-cols-1 gap-2">
+                                @foreach (var group in groups)
+                                {
+                                    <div class="p-2 bg-green-50 rounded-lg text-gray-800 font-mono text-sm animate-fade-in-up">
+                                        Group: @group.Key - Value: @group.Value
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</div>
+}
+
+<!-- Toast Notification -->
+@if (showToast)
+{
+    <div class="fixed bottom-6 right-6 z-50 animate-toast-in cursor-pointer" @onclick="() => showToast = false" role="alert" aria-live="polite">
+        <div class="flex items-center bg-@(toastSuccess ? "green" : "red")-600 text-white px-4 py-3 rounded-lg shadow-lg backdrop-blur-sm">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2 animate-bounce" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="@(toastSuccess ? "M5 13l4 4L19 7" : "M6 18L18 6M6 6l12 12")" />
+            </svg>
+            <span class="font-medium text-sm">@toastMessage</span>
+        </div>
+    </div>
+}
+
+<style>
+    @@keyframes fadeIn {
+        0% { opacity: 0; transform: translateY(20px); }
+        100% { opacity: 1; transform: translateY(0); }
+    }
+
+    @@keyframes slideUp {
+        0% { opacity: 0; transform: translateY(30px); }
+        100% { opacity: 1; transform: translateY(0); }
+    }
+
+    @@keyframes fadeInUp {
+        0% { opacity: 0; transform: translateY(10px); }
+        100% { opacity: 1; transform: translateY(0); }
+    }
+
+    @@keyframes toastIn {
+        0% { opacity: 0; transform: translateX(20px); }
+        100% { opacity: 1; transform: translateX(0); }
+    }
+
+    @@keyframes pulseShort {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+    }
+
+    .animate-fade-in {
+        animation: fadeIn 0.6s ease-in-out;
+    }
+
+    .animate-slide-up {
+        animation: slideUp 0.8s ease-in-out;
+    }
+
+    .animate-fade-in-up {
+        animation: fadeInUp 0.5s ease-in-out;
+    }
+
+    .animate-toast-in {
+        animation: toastIn 0.4s ease-in-out;
+    }
+
+    .animate-pulse-short {
+        animation: pulseShort 2s ease-in-out infinite;
+    }
+
+    .highlight-match {
+        background-color: #fefcbf;
+        padding: 0.1rem 0.2rem;
+        border-radius: 0.25rem;
+    }
+</style>
+
+@code {
+    private string RegexPattern { get; set; } = "";
+    private string TestString { get; set; } = "";
+    private bool IsCaseInsensitive { get; set; }
+    private bool IsGlobal { get; set; }
+    private bool IsMultiline { get; set; }
+    private bool isMatch { get; set; }
+    private List<string> matches { get; set; } = new List<string>();
+    private Dictionary<string, string> groups { get; set; } = new Dictionary<string, string>();
+    private bool hasSubmitted { get; set; } = false;
+    private bool hasTested { get; set; } = false;
+    private bool isTesting { get; set; } = false;
+    private bool isCopying { get; set; } = false;
+    private bool isExporting { get; set; } = false;
+    private bool showToast { get; set; } = false;
+    private bool toastSuccess { get; set; } = false;
+    private string toastMessage { get; set; } = "";
+    private bool showMatches { get; set; } = true;
+    private bool showGroups { get; set; } = true;
+    private string regexErrorMessage { get; set; } = "";
+    private const int maxMatchesToShow = 50;
+
+    private bool IsValidRegexPattern
+    {
+        get
+        {
+            if (string.IsNullOrWhiteSpace(RegexPattern))
+            {
+                regexErrorMessage = "Please enter a regex pattern.";
+                return false;
+            }
+
+            try
+            {
+                var options = GetRegexOptions();
+                new Regex(RegexPattern, options);
+                regexErrorMessage = "";
+                return true;
+            }
+            catch (ArgumentException ex)
+            {
+                regexErrorMessage = "Invalid regex pattern: " + ex.Message;
+                return false;
+            }
+        }
+    }
+
+    public override string Name => "Regex Tester";
+    public override string Description => "Test regular expressions with real-time feedback, match highlighting, and support for flags.";
+    public override string Slug => "regex-tester";
+    public override string Group => "Software Development Tools";
+    public override string Icon => "🔍";
+
+    private async Task TestRegex()
+    {
+        hasSubmitted = true;
+        hasTested = false;
+        matches.Clear();
+        groups.Clear();
+
+        if (!IsValidRegexPattern)
+        {
+            await ShowToastAsync(false, regexErrorMessage);
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(TestString))
+        {
+            await ShowToastAsync(false, "Please enter a test string.");
+            return;
+        }
+
+        isTesting = true;
+        try
+        {
+            await Task.Delay(500); // Simulate processing for animation
+
+            var options = GetRegexOptions();
+            var regex = new Regex(RegexPattern, options);
+            var matchCollection = regex.Matches(TestString);
+            isMatch = matchCollection.Count > 0;
+            hasTested = true;
+
+            if (isMatch)
+            {
+                foreach (Match match in matchCollection)
+                {
+                    matches.Add(match.Value);
+                }
+
+                var firstMatch = matchCollection[0];
+                if (firstMatch.Groups.Count > 1)
+                {
+                    for (int i = 1; i < firstMatch.Groups.Count; i++)
+                    {
+                        string groupName = regex.GroupNameFromNumber(i);
+                        if (!string.IsNullOrEmpty(groupName) && groupName != i.ToString())
+                        {
+                            groups[groupName] = firstMatch.Groups[i].Value;
+                        }
+                        else
+                        {
+                            groups["Group " + i] = firstMatch.Groups[i].Value;
+                        }
+                    }
+                }
+            }
+
+            await ShowToastAsync(true, "Regex test completed successfully!");
+        }
+        catch (Exception ex)
+        {
+            await ShowToastAsync(false, "Error testing regex: " + ex.Message);
+        }
+        finally
+        {
+            isTesting = false;
+            StateHasChanged();
+        }
+    }
+
+    private RegexOptions GetRegexOptions()
+    {
+        var options = RegexOptions.None;
+        if (IsCaseInsensitive) options |= RegexOptions.IgnoreCase;
+        if (IsMultiline) options |= RegexOptions.Multiline;
+        return options;
+    }
+
+    private async Task CopyResults()
+    {
+        if (!hasTested)
+        {
+            await ShowToastAsync(false, "No results to copy.");
+            return;
+        }
+
+        isCopying = true;
+        try
+        {
+            var resultText = BuildResultText();
+            await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", resultText);
+            await ShowToastAsync(true, "Results copied to clipboard!");
+        }
+        catch (Exception ex)
+        {
+            await ShowToastAsync(false, "Error copying results: " + ex.Message);
+        }
+        finally
+        {
+            isCopying = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task ExportResults()
+    {
+        if (!hasTested)
+        {
+            await ShowToastAsync(false, "No results to export.");
+            return;
+        }
+
+        isExporting = true;
+        try
+        {
+            var resultText = BuildResultText();
+            var fileName = "regex-test-results-" + DateTime.Now.ToString("yyyyMMddHHmmss") + ".txt";
+            await JSRuntime.InvokeVoidAsync("saveAsFile", fileName, resultText);
+            await ShowToastAsync(true, "Results exported as " + fileName + "!");
+        }
+        catch (Exception ex)
+        {
+            await ShowToastAsync(false, "Error exporting results: " + ex.Message);
+        }
+        finally
+        {
+            isExporting = false;
+            StateHasChanged();
+        }
+    }
+
+    private string BuildResultText()
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine("Regex Test Results");
+        sb.AppendLine("Pattern: " + (RegexPattern ?? "None"));
+
+        var flags = new List<string>();
+        if (IsCaseInsensitive) flags.Add("i");
+        if (IsGlobal) flags.Add("g");
+        if (IsMultiline) flags.Add("m");
+        var flagsText = flags.Any() ? string.Join("", flags) : "None";
+        sb.AppendLine("Flags: " + flagsText);
+
+        sb.AppendLine("Test String: " + (TestString ?? "None"));
+        sb.AppendLine("Match Result: " + (isMatch ? "Match Found" : "No Match"));
+
+        var matchesText = matches.Any() ? string.Join(", ", matches.Take(maxMatchesToShow)) : "None";
+        sb.AppendLine("Matches: " + matchesText);
+
+        var groupsText = groups.Any() ? string.Join(", ", groups.Select(g => g.Key + ": " + g.Value)) : "None";
+        sb.AppendLine("Captured Groups: " + groupsText);
+
+        return sb.ToString();
+    }
+
+    private void ClearForm()
+    {
+        RegexPattern = "";
+        TestString = "";
+        IsCaseInsensitive = false;
+        IsGlobal = false;
+        IsMultiline = false;
+        hasSubmitted = false;
+        hasTested = false;
+        matches.Clear();
+        groups.Clear();
+        regexErrorMessage = "";
+        showToast = false;
+        StateHasChanged();
+    }
+
+    private string HighlightMatches(string text, List<string> matches)
+    {
+        if (string.IsNullOrEmpty(text) || !matches.Any())
+        {
+            return text;
+        }
+
+        var result = text;
+        foreach (var match in matches.Distinct())
+        {
+            if (!string.IsNullOrEmpty(match))
+            {
+                result = result.Replace(match, "<span class=\"highlight-match\">" + match + "</span>");
+            }
+        }
+        return result;
+    }
+
+    private async Task ShowToastAsync(bool success, string message)
+    {
+        toastSuccess = success;
+        toastMessage = message;
+        showToast = true;
+        StateHasChanged();
+        await Task.Delay(3000);
+        showToast = false;
+        StateHasChanged();
+    }
+}
