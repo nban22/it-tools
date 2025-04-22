@@ -1,0 +1,540 @@
+﻿@using it_tools.ToolDevelopment.Base
+@using it_tools.ToolDevelopment.Attributes
+@using Microsoft.JSInterop
+@inject IJSRuntime JSRuntime
+@inherits ToolComponentBase
+
+<div class="min-h-screen bg-gradient-to-br from-gray-100 to-gray-300 p-8 flex items-center justify-center">
+    <div class="max-w-4xl w-full">
+        <!-- Header -->
+        <div class="flex items-center justify-between mb-12 animate-fade-in">
+            <div>
+                <h2 class="text-4xl font-extrabold text-gray-900 tracking-tight animate-pulse-short">@Name</h2>
+                <p class="text-gray-600 mt-3 text-lg font-medium">@Description</p>
+            </div>
+            <div class="text-gray-500 text-4xl animate-bounce">@Icon</div>
+        </div>
+
+        <!-- API Mock Generator Form -->
+        <div class="bg-white p-8 rounded-3xl shadow-2xl mb-8 animate-slide-up">
+            <div class="space-y-8">
+                <!-- API Endpoint Input -->
+                <div class="relative">
+                    <label for="endpoint" class="block text-sm font-medium text-gray-700 mb-3 tracking-wide">API Endpoint</label>
+                    <input id="endpoint" 
+                           type="text" 
+                           @bind="Endpoint" 
+                           @bind:event="oninput" 
+                           placeholder="e.g., /api/users" 
+                           class="w-full px-5 py-4 border-2 @(IsValidEndpoint ? "border-gray-300" : "border-red-500") rounded-xl focus:ring-4 focus:ring-blue-400 focus:border-blue-500 transition-all duration-300 bg-white/80 backdrop-blur-sm shadow-inner h-14 placeholder-gray-400 text-gray-800"
+                           aria-describedby="endpoint-error" />
+                    <span class="absolute inset-y-0 right-0 flex items-center pr-4 mt-12">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    </span>
+                    @if (!IsValidEndpoint)
+                    {
+                        <p id="endpoint-error" class="text-red-500 text-xs mt-2 animate-pulse">Please enter a valid API endpoint (e.g., /api/users).</p>
+                    }
+                </div>
+
+                <!-- Framework Selection -->
+                <div class="relative">
+                    <label for="framework" class="block text-sm font-medium text-gray-700 mb-3 tracking-wide">Framework</label>
+                    <select id="framework" 
+                            @bind="Framework" 
+                            class="w-full px-5 py-4 border-2 border-gray-300 rounded-xl focus:ring-4 focus:ring-blue-400 focus:border-blue-500 transition-all duration-300 bg-white/80 backdrop-blur-sm shadow-inner h-14 text-gray-800"
+                            aria-describedby="framework-help">
+                        <option value="Express">Express.js</option>
+                        <option value="Flask">Flask</option>
+                        <option value="FastAPI">FastAPI</option>
+                    </select>
+                    <span class="absolute inset-y-0 right-0 flex items-center pr-4 mt-12">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400 animate-bounce" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </span>
+                    <p id="framework-help" class="text-gray-500 text-xs mt-2">Select the framework for the mock API.</p>
+                </div>
+
+                <!-- Response Type Selection -->
+                <div class="relative">
+                    <label for="response-type" class="block text-sm font-medium text-gray-700 mb-3 tracking-wide">Response Type</label>
+                    <select id="response-type" 
+                            @bind="ResponseType" 
+                            class="w-full px-5 py-4 border-2 border-gray-300 rounded-xl focus:ring-4 focus:ring-blue-400 focus:border-blue-500 transition-all duration-300 bg-white/80 backdrop-blur-sm shadow-inner h-14 text-gray-800"
+                            aria-describedby="response-type-help">
+                        <option value="JSON">JSON</option>
+                        <option value="XML">XML</option>
+                    </select>
+                    <span class="absolute inset-y-0 right-0 flex items-center pr-4 mt-12">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400 animate-bounce" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </span>
+                    <p id="response-type-help" class="text-gray-500 text-xs mt-2">Choose the format of the mock response.</p>
+                </div>
+
+                <!-- Response Data Structure -->
+                <div class="relative">
+                    <label for="response-data" class="block text-sm font-medium text-gray-700 mb-3 tracking-wide">Response Data (@ResponseType format)</label>
+                    <textarea id="response-data" 
+                              @bind="ResponseData" 
+                              @bind:event="oninput" 
+                              placeholder="@(ResponseType == "JSON" ? "e.g., {\"id\": 1, \"name\": \"John Doe\"}" : "e.g., <user><id>1</id><name>John Doe</name></user>")"
+                              class="w-full px-5 py-4 border-2 @(IsValidResponseData ? "border-gray-300" : "border-red-500") rounded-xl focus:ring-4 focus:ring-blue-400 focus:border-blue-500 transition-all duration-300 bg-white/80 backdrop-blur-sm shadow-inner h-32 placeholder-gray-400 text-gray-800 resize-none"
+                              aria-describedby="response-data-error"></textarea>
+                    @if (!IsValidResponseData)
+                    {
+                        <p id="response-data-error" class="text-red-500 text-xs mt-2 animate-pulse">Please provide valid @(ResponseType) data.</p>
+                    }
+                </div>
+
+                <!-- HTTP Status Code -->
+                <div class="relative">
+                    <label for="status-code" class="block text-sm font-medium text-gray-700 mb-3 tracking-wide">HTTP Status Code</label>
+                    <input id="status-code" 
+                           type="number" 
+                           @bind="StatusCode" 
+                           @bind:event="oninput" 
+                           min="100" 
+                           max="599" 
+                           class="w-full px-5 py-4 border-2 @(IsValidStatusCode ? "border-gray-300" : "border-red-500") rounded-xl focus:ring-4 focus:ring-blue-400 focus:border-blue-500 transition-all duration-300 bg-white/80 backdrop-blur-sm shadow-inner h-14 placeholder-gray-400 text-gray-800"
+                           placeholder="e.g., 200"
+                           aria-describedby="status-code-error" />
+                    <span class="absolute inset-y-0 right-0 flex items-center pr-4 mt-12">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M12 5l7 7-7 7" />
+                        </svg>
+                    </span>
+                    @if (!IsValidStatusCode)
+                    {
+                        <p id="status-code-error" class="text-red-500 text-xs mt-2 animate-pulse">Status code must be between 100 and 599.</p>
+                    }
+                </div>
+
+                <!-- Custom Headers -->
+                <div class="relative">
+                    <label for="custom-headers" class="block text-sm font-medium text-gray-700 mb-3 tracking-wide">Custom Headers (JSON format)</label>
+                    <textarea id="custom-headers" 
+                              @bind="CustomHeaders" 
+                              @bind:event="oninput" 
+                              placeholder='e.g., {"Content-Type": "application/json", "X-API-Key": "12345"}'
+                              class="w-full px-5 py-4 border-2 @(IsValidCustomHeaders ? "border-gray-300" : "border-red-500") rounded-xl focus:ring-4 focus:ring-blue-400 focus:border-blue-500 transition-all duration-300 bg-white/80 backdrop-blur-sm shadow-inner h-32 placeholder-gray-400 text-gray-800 resize-none"
+                              aria-describedby="custom-headers-error"></textarea>
+                    @if (!IsValidCustomHeaders)
+                    {
+                        <p id="custom-headers-error" class="text-red-500 text-xs mt-2 animate-pulse">Please provide valid JSON for custom headers.</p>
+                    }
+                </div>
+
+                <!-- Generate Button -->
+                <div class="text-center">
+                    <button @onclick="GenerateMockAPI" 
+                            disabled="@isGenerating" 
+                            class="relative px-8 py-4 bg-gradient-to-r from-indigo-600 to-blue-500 text-white rounded-xl hover:from-indigo-700 hover:to-blue-600 transition-all duration-500 shadow-lg hover:shadow-2xl transform hover:-translate-y-1 h-14 overflow-hidden group"
+                            aria-label="Generate mock API">
+                        <span class="relative z-10">@(isGenerating ? "Generating..." : "Generate Mock API")</span>
+                        <span class="absolute inset-0 bg-gradient-to-r from-blue-500 to-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></span>
+                        <span class="absolute top-0 left-0 w-0 h-full bg-white/20 transition-all duration-500 group-hover:w-full"></span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Live Preview -->
+        @if (!string.IsNullOrEmpty(generatedMock))
+        {
+            <div class="bg-white p-8 rounded-3xl shadow-2xl mb-8 animate-slide-up">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-2xl font-bold text-gray-800 tracking-tight flex items-center">
+                        <span class="inline-block w-4 h-4 bg-blue-500 rounded-full mr-2 animate-pulse"></span>
+                        Live Preview
+                    </h3>
+                </div>
+                <div class="p-4 bg-gray-900 text-white rounded-lg font-mono text-sm whitespace-pre-wrap animate-fade-in-up overflow-x-auto">
+                    <code>@generatedMock</code>
+                </div>
+            </div>
+        }
+
+        <!-- Generated Mock API -->
+        @if (!string.IsNullOrEmpty(generatedMock))
+        {
+            <div class="bg-white p-8 rounded-3xl shadow-2xl animate-slide-up">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-2xl font-bold text-gray-800 tracking-tight flex items-center">
+                        <span class="inline-block w-4 h-4 bg-blue-500 rounded-full mr-2 animate-pulse"></span>
+                        Generated Mock API
+                    </h3>
+                    <div class="flex space-x-4">
+                        <button @onclick="CopyMock" 
+                                disabled="@isCopying" 
+                                class="flex items-center px-5 py-2 bg-gradient-to-r from-green-600 to-green-500 text-white rounded-lg hover:from-green-700 hover:to-green-600 transition-all duration-300 shadow-md transform hover:-translate-y-0.5"
+                                aria-label="Copy mock API code">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 animate-bounce" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                            </svg>
+                            @if (isCopying)
+                            {
+                                <span>Copying...</span>
+                            }
+                            else
+                            {
+                                <span>Copy Mock</span>
+                            }
+                        </button>
+                        <button @onclick="ExportMock" 
+                                disabled="@isExporting" 
+                                class="flex items-center px-5 py-2 bg-gradient-to-r from-blue-600 to-blue-500 text-white rounded-lg hover:from-blue-700 hover:to-blue-600 transition-all duration-300 shadow-md transform hover:-translate-y-0.5"
+                                aria-label="Export mock API code">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 animate-bounce" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                            </svg>
+                            @if (isExporting)
+                            {
+                                <span>Exporting...</span>
+                            }
+                            else
+                            {
+                                <span>Export</span>
+                            }
+                        </button>
+                    </div>
+                </div>
+                <div class="p-4 bg-gray-900 text-white rounded-lg font-mono text-sm whitespace-pre-wrap animate-fade-in-up overflow-x-auto">
+                    <code>@generatedMock</code>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+<!-- Toast Notification -->
+@if (showToast)
+{
+    <div class="fixed bottom-10 right-10 z-50 animate-toast-in" role="alert" aria-live="polite">
+        <div class="flex items-center bg-@(toastSuccess ? "green" : "red")-600 text-white px-6 py-4 rounded-xl shadow-2xl backdrop-blur-sm">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 mr-3 animate-bounce" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="@(toastSuccess ? "M5 13l4 4L19 7" : "M6 18L18 6M6 6l12 12")" />
+            </svg>
+            <span class="font-medium text-lg">@toastMessage</span>
+        </div>
+    </div>
+}
+
+<style>
+    @@keyframes fadeIn {
+        0% { opacity: 0; transform: translateY(20px); }
+        100% { opacity: 1; transform: translateY(0); }
+    }
+
+    @@keyframes slideUp {
+        0% { opacity: 0; transform: translateY(30px); }
+        100% { opacity: 1; transform: translateY(0); }
+    }
+
+    @@keyframes fadeInUp {
+        0% { opacity: 0; transform: translateY(10px); }
+        100% { opacity: 1; transform: translateY(0); }
+    }
+
+    @@keyframes toastIn {
+        0% { opacity: 0; transform: translateX(20px); }
+        100% { opacity: 1; transform: translateX(0); }
+    }
+
+    @@keyframes pulseShort {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+    }
+
+    .animate-fade-in {
+        animation: fadeIn 0.6s ease-in-out;
+    }
+
+    .animate-slide-up {
+        animation: slideUp 0.8s ease-in-out;
+    }
+
+    .animate-fade-in-up {
+        animation: fadeInUp 0.5s ease-in-out;
+    }
+
+    .animate-toast-in {
+        animation: toastIn 0.4s ease-in-out;
+    }
+
+    .animate-pulse-short {
+        animation: pulseShort 2s ease-in-out infinite;
+    }
+
+    code {
+        display: block;
+        background: #1a202c;
+        color: #e2e8f0;
+        padding: 1rem;
+        border-radius: 0.5rem;
+        font-family: 'Consolas', 'Monaco', monospace;
+    }
+</style>
+
+@code {
+    private string Endpoint { get; set; } = "";
+    private string Framework { get; set; } = "Express";
+    private string ResponseType { get; set; } = "JSON";
+    private string ResponseData { get; set; } = "";
+    private int StatusCode { get; set; } = 200;
+    private string CustomHeaders { get; set; } = "";
+    private string generatedMock { get; set; } = "";
+    private bool hasSubmitted { get; set; } = false;
+    private bool isGenerating { get; set; } = false;
+    private bool isCopying { get; set; } = false;
+    private bool isExporting { get; set; } = false;
+    private bool showToast { get; set; } = false;
+    private bool toastSuccess { get; set; } = false;
+    private string toastMessage { get; set; } = "";
+
+    private bool IsValidEndpoint => !string.IsNullOrWhiteSpace(Endpoint) && Endpoint.StartsWith("/");
+    private bool IsValidResponseData => !string.IsNullOrWhiteSpace(ResponseData) && IsValidFormat(ResponseData, ResponseType);
+    private bool IsValidStatusCode => StatusCode >= 100 && StatusCode <= 599;
+    private bool IsValidCustomHeaders => string.IsNullOrWhiteSpace(CustomHeaders) || IsValidJson(CustomHeaders);
+
+    public override string Name => "API Mock Generator";
+    public override string Description => "Generate mock API responses for development and testing with support for multiple frameworks.";
+    public override string Slug => "api-mock-generator";
+    public override string Group => "Software Development Tools";
+    public override string Icon => "🔗";
+
+    private async Task GenerateMockAPI()
+    {
+        hasSubmitted = true;
+        generatedMock = "";
+
+        if (!IsValidEndpoint)
+        {
+            await ShowToastAsync(false, "Please enter a valid API endpoint (e.g., /api/users).");
+            return;
+        }
+
+        if (!IsValidResponseData)
+        {
+            await ShowToastAsync(false, $"Please provide valid {ResponseType} data.");
+            return;
+        }
+
+        if (!IsValidStatusCode)
+        {
+            await ShowToastAsync(false, "Status code must be between 100 and 599.");
+            return;
+        }
+
+        if (!IsValidCustomHeaders)
+        {
+            await ShowToastAsync(false, "Please provide valid JSON for custom headers.");
+            return;
+        }
+
+        isGenerating = true;
+        try
+        {
+            await Task.Delay(500); // Simulate processing for animation
+
+            string mockCode = Framework switch
+            {
+                "Express" => GenerateExpressMock(),
+                "Flask" => GenerateFlaskMock(),
+                "FastAPI" => GenerateFastAPIMock(),
+                _ => throw new InvalidOperationException("Unsupported framework")
+            };
+
+            generatedMock = mockCode;
+            await ShowToastAsync(true, "Mock API generated successfully!");
+        }
+        catch (Exception ex)
+        {
+            await ShowToastAsync(false, $"Error generating mock API: {ex.Message}");
+        }
+        finally
+        {
+            isGenerating = false;
+            StateHasChanged();
+        }
+    }
+
+    private string GenerateExpressMock()
+    {
+        var headers = string.IsNullOrWhiteSpace(CustomHeaders) ? "" : $@"Object.entries({CustomHeaders}).forEach(([key, value]) => res.setHeader(key, value));";
+        return $@"// Mock API using Express.js
+const express = require('express');
+const app = express();
+const port = 3000;
+
+app.use(express.json());
+
+// Mock endpoint: {Endpoint}
+app.get('{Endpoint}', (req, res) => {{
+    {headers}
+    res.status({StatusCode}).{(ResponseType == "JSON" ? "json" : "send")}({(ResponseType == "JSON" ? ResponseData : $"\"{ResponseData.Replace("\"", "\\\"")}\"")});
+}});
+
+app.listen(port, () => {{
+    console.log(`Mock API running at http://localhost:${{port}}`);
+}});
+";
+    }
+
+private string GenerateFlaskMock()
+{
+    var headers = string.IsNullOrWhiteSpace(CustomHeaders) ? "" : $"    response.headers.update({CustomHeaders})";
+    return 
+$@"# Mock API using Flask
+from flask import Flask, jsonify, make_response
+
+app = Flask(__name__)
+
+# Mock endpoint: {Endpoint}
+@app.route('{Endpoint}', methods=['GET'])
+def mock_endpoint():
+    response = {(ResponseType == "JSON" ? $"jsonify({ResponseData})" : $"make_response(\"\"\"{ResponseData}\"\"\")")}
+    response.status_code = {StatusCode}
+{headers}
+    return response
+
+if __name__ == '__main__':
+    app.run(port=3000, debug=True)
+";
+}
+
+
+
+private string GenerateFastAPIMock()
+{
+    var headers = string.IsNullOrWhiteSpace(CustomHeaders) ? "None" : CustomHeaders;
+    return 
+$@"Mock API using FastAPI
+from fastapi import FastAPI
+from fastapi.responses import {(ResponseType == "JSON" ? "JSONResponse" : "Response")}
+
+app = FastAPI()
+
+# Mock endpoint: {Endpoint}
+@app.get('{Endpoint}')
+async def mock_endpoint():
+    headers = {headers}
+    return {(ResponseType == "JSON" 
+        ? $"JSONResponse(content={ResponseData}, status_code={StatusCode}, headers=headers)" 
+        : $"Response(content=\"\"\"{ResponseData}\"\"\", status_code={StatusCode}, headers=headers, media_type='application/xml')" )}
+
+if __name__ == '__main__':
+    import uvicorn
+    uvicorn.run(app, host='0.0.0.0', port=3000)
+";
+}
+
+
+
+    private async Task CopyMock()
+    {
+        if (string.IsNullOrEmpty(generatedMock))
+        {
+            await ShowToastAsync(false, "No mock API to copy.");
+            return;
+        }
+
+        isCopying = true;
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", generatedMock);
+            await ShowToastAsync(true, "Mock API copied to clipboard!");
+        }
+        catch (Exception ex)
+        {
+            await ShowToastAsync(false, $"Error copying mock API: {ex.Message}");
+        }
+        finally
+        {
+            isCopying = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task ExportMock()
+    {
+        if (string.IsNullOrEmpty(generatedMock))
+        {
+            await ShowToastAsync(false, "No mock API to export.");
+            return;
+        }
+
+        isExporting = true;
+        try
+        {
+            var extension = Framework switch
+            {
+                "Express" => "js",
+                "Flask" => "py",
+                "FastAPI" => "py",
+                _ => "txt"
+            };
+            var fileName = $"mock-api-{Slug}.{extension}";
+            await JSRuntime.InvokeVoidAsync("saveAsFile", fileName, generatedMock);
+            await ShowToastAsync(true, $"Mock API exported as {fileName}!");
+        }
+        catch (Exception ex)
+        {
+            await ShowToastAsync(false, $"Error exporting mock API: {ex.Message}");
+        }
+        finally
+        {
+            isExporting = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task ShowToastAsync(bool success, string message)
+    {
+        toastSuccess = success;
+        toastMessage = message;
+        showToast = true;
+        StateHasChanged();
+        await Task.Delay(3000);
+        showToast = false;
+        StateHasChanged();
+    }
+
+    private bool IsValidFormat(string data, string format)
+    {
+        try
+        {
+            if (format == "JSON")
+            {
+                System.Text.Json.JsonDocument.Parse(data);
+            }
+            else if (format == "XML")
+            {
+                var doc = new System.Xml.XmlDocument();
+                doc.LoadXml(data);
+            }
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private bool IsValidJson(string json)
+    {
+        try
+        {
+            System.Text.Json.JsonDocument.Parse(json);
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+}
