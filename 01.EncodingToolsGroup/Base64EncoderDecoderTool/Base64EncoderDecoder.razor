@@ -1,0 +1,95 @@
+﻿@using it_tools.ToolDevelopment.Base
+@using it_tools.ToolDevelopment.Attributes
+@attribute [ToolComponentAttribute(true)]
+@inherits ToolComponentBase
+
+<div class="p-4 bg-white rounded-lg shadow-md">
+    <h2 class="text-xl font-bold mb-4">@Name</h2>
+    <p class="text-gray-600 mb-6">@Description</p>
+    
+    <!-- Tool UI -->
+    <div class="space-y-4">
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Text:</label>
+            <textarea @bind="_inputText" class="w-full px-3 py-2 border border-gray-300 rounded-md" rows="5"></textarea>
+        </div>
+        
+        <div class="flex space-x-2">
+            <button @onclick="Encode" class="px-4 py-2 bg-blue-600 text-white rounded-md">
+                Encode Base64
+            </button>
+            <button @onclick="Decode" class="px-4 py-2 bg-green-600 text-white rounded-md">
+                Decode Base64
+            </button>
+        </div>
+        
+        @if (!string.IsNullOrEmpty(_outputText))
+        {
+            <div class="mt-4">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Result:</label>
+                <div class="p-3 bg-gray-50 rounded-md">
+                    <textarea readonly class="w-full bg-transparent border-none" rows="5">@_outputText</textarea>
+                </div>
+            </div>
+        }
+        
+        @if (!string.IsNullOrEmpty(_errorMessage))
+        {
+            <div class="mt-2 p-2 bg-red-50 text-red-700 rounded-md">
+                @_errorMessage
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private string _inputText = "";
+    private string _outputText = "";
+    private string _errorMessage = "";
+    
+    // Implement required properties from ToolComponentBase
+    public override string Name => "Base64 Encoder-Decoder";
+    public override string Description => "Tool for encoding and decoding text using Base64";
+    public override string Group => "Encoding Tools";
+    public override string Icon => "🔄";
+    
+    private void Encode()
+    {
+        try
+        {
+            _errorMessage = "";
+            if (string.IsNullOrEmpty(_inputText))
+            {
+                _errorMessage = "Please enter text to encode";
+                return;
+            }
+            
+            byte[] textBytes = System.Text.Encoding.UTF8.GetBytes(_inputText);
+            _outputText = Convert.ToBase64String(textBytes);
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Encoding error: {ex.Message}";
+        }
+    }
+    
+    private void Decode()
+    {
+        try
+        {
+            _errorMessage = "";
+            if (string.IsNullOrEmpty(_inputText))
+            {
+                _errorMessage = "Please enter a Base64 string to decode";
+                return;
+            }
+            
+            byte[] base64Bytes = Convert.FromBase64String(_inputText);
+            _outputText = System.Text.Encoding.UTF8.GetString(base64Bytes);
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Decoding error: {ex.Message}. The input may not be a valid Base64 string.";
+        }
+    }
+}

@@ -1,0 +1,352 @@
+﻿@using it_tools.ToolDevelopment.Base
+@using it_tools.ToolDevelopment.Attributes
+@using System.Text
+@using System.Collections.Generic
+@attribute [ToolComponentAttribute(true)]
+@inherits ToolComponentBase
+
+<div class="p-6 bg-white rounded-lg shadow-lg">
+    <div class="flex items-center mb-6">
+        <div class="mr-3 bg-indigo-100 p-2 rounded-lg">
+            <span class="text-2xl">@Icon</span>
+        </div>
+        <div>
+            <h2 class="text-2xl font-bold text-gray-800">@Name</h2>
+            <p class="text-gray-600">@Description</p>
+        </div>
+    </div>
+    
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- Configuration Panel -->
+        <div class="bg-gray-50 p-5 rounded-lg border border-gray-200">
+            <h3 class="text-lg font-semibold text-gray-700 mb-4">Configuration</h3>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Type</label>
+                    <select @bind="_generationType" class="w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <option value="paragraphs">Paragraphs</option>
+                        <option value="sentences">Sentences</option>
+                        <option value="words">Words</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Count</label>
+                    <input type="number" @bind="_count" min="1" max="100" class="w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Options</label>
+                    <div class="space-y-2">
+                        <div class="flex items-center">
+                            <input type="checkbox" id="startWithLorem" @bind="_startWithLorem" class="mr-2 h-4 w-4 text-indigo-600 focus:ring-indigo-500 rounded" />
+                            <label for="startWithLorem" class="text-sm text-gray-700">Start with "Lorem ipsum dolor sit amet"</label>
+                        </div>
+                        
+                        <div class="flex items-center">
+                            <input type="checkbox" id="includeHtml" @bind="_includeHtml" class="mr-2 h-4 w-4 text-indigo-600 focus:ring-indigo-500 rounded" />
+                            <label for="includeHtml" class="text-sm text-gray-700">Include HTML tags</label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Format</label>
+                    <div class="flex items-center space-x-4">
+                        <div class="flex items-center">
+                            <input type="radio" id="plainText" name="format" value="plain" checked="@(_format == "plain")" @onchange="@(e => _format = "plain")" class="mr-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500" />
+                            <label for="plainText" class="text-sm text-gray-700">Plain Text</label>
+                        </div>
+                        <div class="flex items-center">
+                            <input type="radio" id="htmlFormat" name="format" value="html" checked="@(_format == "html")" @onchange="@(e => _format = "html")" class="mr-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500" />
+                            <label for="htmlFormat" class="text-sm text-gray-700">HTML</label>
+                        </div>
+                    </div>
+                </div>
+                
+                <button @onclick="GenerateLoremIpsum" class="w-full px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-md shadow-sm transition duration-150 ease-in-out">
+                    Generate
+                </button>
+            </div>
+        </div>
+        
+        <!-- Output Panel -->
+        <div class="bg-gray-50 p-5 rounded-lg border border-gray-200">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold text-gray-700">Generated Text</h3>
+                @if (!string.IsNullOrEmpty(_outputText))
+                {
+                    <div class="flex space-x-2">
+                        <button @onclick="CopyToClipboard" class="px-3 py-1 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-md text-sm flex items-center transition duration-150 ease-in-out">
+                            <span>Copy</span>
+                        </button>
+                        <button @onclick="ClearOutput" class="px-3 py-1 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-md text-sm flex items-center transition duration-150 ease-in-out">
+                            <span>Clear</span>
+                        </button>
+                    </div>
+                }
+            </div>
+            
+            <div class="h-64 overflow-auto border border-gray-200 rounded-md bg-white p-3">
+                @if (!string.IsNullOrEmpty(_outputText))
+                {
+                    @if (_format == "html")
+                    {
+                        <div class="prose prose-sm max-w-none">
+                            @((MarkupString)_outputText)
+                        </div>
+                    }
+                    else
+                    {
+                        <pre class="text-sm whitespace-pre-wrap text-gray-800">@_outputText</pre>
+                    }
+                }
+                else
+                {
+                    <div class="h-full flex items-center justify-center text-gray-400">
+                        <p>Generated text will appear here</p>
+                    </div>
+                }
+            </div>
+            
+            @if (!string.IsNullOrEmpty(_statusMessage))
+            {
+                <div class="mt-2 @(_isError ? "text-red-600" : "text-green-600") text-sm">
+                    @_statusMessage
+                </div>
+            }
+            
+            <div class="mt-4">
+                <div class="flex items-center text-gray-500 text-sm">
+                    <span>Character count: @(_outputText?.Length ?? 0)</span>
+                    <span class="mx-2">•</span>
+                    <span>Word count: @(CountWords(_outputText))</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private string _outputText = "";
+    private string _statusMessage = "";
+    private bool _isError = false;
+    private string _generationType = "paragraphs";
+    private int _count = 3;
+    private bool _startWithLorem = true;
+    private bool _includeHtml = false;
+    private string _format = "plain";
+
+    // Implement required properties from ToolComponentBase
+    public override string Name => "Lorem Ipsum Generator";
+    public override string Description => "Generate customizable Lorem Ipsum placeholder text";
+    public override string Group => "String Processing Tools";
+    public override string Icon => "📝";
+    
+    // The lorem ipsum words to use for generation
+    private static readonly string[] _words = new[]
+    {
+        "lorem", "ipsum", "dolor", "sit", "amet", "consectetur", "adipiscing", "elit", "sed", "do",
+        "eiusmod", "tempor", "incididunt", "ut", "labore", "et", "dolore", "magna", "aliqua", "enim",
+        "ad", "minim", "veniam", "quis", "nostrud", "exercitation", "ullamco", "laboris", "nisi", "ut",
+        "aliquip", "ex", "ea", "commodo", "consequat", "duis", "aute", "irure", "dolor", "in",
+        "reprehenderit", "in", "voluptate", "velit", "esse", "cillum", "dolore", "eu", "fugiat", "nulla",
+        "pariatur", "excepteur", "sint", "occaecat", "cupidatat", "non", "proident", "sunt", "in", "culpa",
+        "qui", "officia", "deserunt", "mollit", "anim", "id", "est", "laborum", "sed", "ut",
+        "perspiciatis", "unde", "omnis", "iste", "natus", "error", "voluptatem", "accusantium", "doloremque", "laudantium",
+        "totam", "rem", "aperiam", "eaque", "ipsa", "quae", "ab", "illo", "inventore", "veritatis",
+        "et", "quasi", "architecto", "beatae", "vitae", "dicta", "sunt", "explicabo", "nemo", "enim"
+    };
+    
+    private void CopyToClipboard()
+    {
+        try
+        {
+            _statusMessage = "Copied to clipboard!";
+            _isError = false;
+            // Note: Actual clipboard functionality must be implemented client-side with JS interop
+        }
+        catch (Exception ex)
+        {
+            _statusMessage = $"Error copying to clipboard: {ex.Message}";
+            _isError = true;
+        }
+    }
+    
+    private void ClearOutput()
+    {
+        _outputText = "";
+        _statusMessage = "";
+    }
+    
+    private int CountWords(string text)
+    {
+        if (string.IsNullOrEmpty(text))
+            return 0;
+            
+        // Remove HTML tags if present
+        string cleanText = System.Text.RegularExpressions.Regex.Replace(text, "<.*?>", " ");
+        
+        // Split by whitespace and count non-empty parts
+        return cleanText.Split(new[] { ' ', '\n', '\r', '\t' }, StringSplitOptions.RemoveEmptyEntries).Length;
+    }
+    
+    private void GenerateLoremIpsum()
+    {
+        try
+        {
+            _statusMessage = "";
+            _isError = false;
+            
+            if (_count <= 0 || _count > 100)
+            {
+                _statusMessage = "Count must be between 1 and 100";
+                _isError = true;
+                return;
+            }
+            
+            Random random = new Random();
+            StringBuilder result = new StringBuilder();
+            
+            switch (_generationType)
+            {
+                case "paragraphs":
+                    GenerateParagraphs(result, random);
+                    break;
+                case "sentences":
+                    GenerateSentences(result, random, _count);
+                    break;
+                case "words":
+                    GenerateWords(result, random, _count);
+                    break;
+            }
+            
+            _outputText = result.ToString();
+        }
+        catch (Exception ex)
+        {
+            _statusMessage = $"Error generating text: {ex.Message}";
+            _isError = true;
+        }
+    }
+    
+    private void GenerateParagraphs(StringBuilder result, Random random)
+    {
+        for (int i = 0; i < _count; i++)
+        {
+            if (_format == "html")
+            {
+                result.Append("<p>");
+            }
+            
+            int sentenceCount = random.Next(3, 8);
+            GenerateSentences(result, random, sentenceCount, i == 0);
+            
+            if (_format == "html")
+            {
+                result.Append("</p>");
+            }
+            else if (i < _count - 1)
+            {
+                result.Append("\r\n\r\n");
+            }
+        }
+    }
+    
+    private void GenerateSentences(StringBuilder result, Random random, int count, bool isFirst = true)
+    {
+        for (int i = 0; i < count; i++)
+        {
+            bool isFirstSentence = isFirst && i == 0;
+            int wordCount = random.Next(5, 15);
+            
+            if (_includeHtml && _format == "html" && random.Next(100) < 20)
+            {
+                // Occasionally add formatting tags
+                string[] tags = { "em", "strong", "span", "mark" };
+                string tag = tags[random.Next(tags.Length)];
+                
+                result.Append(GenerateSentence(random, wordCount / 2, isFirstSentence));
+                result.Append($" <{tag}>");
+                result.Append(GenerateSentence(random, wordCount / 2, false, false));
+                result.Append($"</{tag}>");
+            }
+            else
+            {
+                result.Append(GenerateSentence(random, wordCount, isFirstSentence));
+            }
+            
+            if (i < count - 1)
+            {
+                result.Append(" ");
+            }
+        }
+    }
+    
+    private string GenerateSentence(Random random, int wordCount, bool isFirst, bool addPeriod = true)
+    {
+        StringBuilder sentence = new StringBuilder();
+        
+        for (int i = 0; i < wordCount; i++)
+        {
+            if (i == 0)
+            {
+                string word;
+                
+                if (isFirst && _startWithLorem)
+                {
+                    word = "Lorem ipsum dolor sit amet";
+                    i += 4; // Advance counter as we've added 5 words
+                }
+                else
+                {
+                    word = _words[random.Next(_words.Length)];
+                    word = char.ToUpper(word[0]) + word.Substring(1);
+                }
+                
+                sentence.Append(word);
+            }
+            else
+            {
+                sentence.Append(" ");
+                sentence.Append(_words[random.Next(_words.Length)]);
+            }
+            
+            // Occasionally add commas
+            if (i > 0 && i < wordCount - 1 && random.Next(100) < 10)
+            {
+                sentence.Append(",");
+            }
+        }
+        
+        if (addPeriod)
+        {
+            // Add different punctuation at the end
+            string[] punctuation = { ".", ".", ".", ".", "!", "?" };
+            sentence.Append(punctuation[random.Next(punctuation.Length)]);
+        }
+        
+        return sentence.ToString();
+    }
+    
+    private void GenerateWords(StringBuilder result, Random random, int count)
+    {
+        if (_startWithLorem && count >= 5)
+        {
+            result.Append("Lorem ipsum dolor sit amet");
+            count -= 5;
+            
+            if (count > 0)
+                result.Append(" ");
+        }
+        
+        for (int i = 0; i < count; i++)
+        {
+            result.Append(_words[random.Next(_words.Length)]);
+            
+            if (i < count - 1)
+                result.Append(" ");
+        }
+    }
+}

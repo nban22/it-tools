@@ -1,0 +1,275 @@
+﻿@using it_tools.ToolDevelopment.Base
+@using it_tools.ToolDevelopment.Attributes
+@using Microsoft.JSInterop
+@using System.ComponentModel.DataAnnotations
+@inject IJSRuntime JSRuntime
+@inherits ToolComponentBase
+
+<div class="p-6 bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen">
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-8 animate-fade-in">
+        <div>
+            <h2 class="text-3xl font-extrabold text-gray-900 tracking-tight">@Name</h2>
+            <p class="text-gray-600 mt-1">@Description</p>
+        </div>
+    </div>
+
+    <!-- Form -->
+    <div class="bg-white p-6 rounded-2xl shadow-xl mb-6 animate-slide-in">
+        <div class="space-y-6">
+            <!-- Form inputs -->
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <!-- Gender -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Gender:</label>
+                    <select @bind="Gender" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 h-12">
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                    </select>
+                </div>
+
+                <!-- Height -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Height (cm):</label>
+                    <input type="number" @bind="Height" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 h-12" placeholder="Enter height (cm)" />
+                    @if (Height <= 0 && HasSubmitted)
+                    {
+                        <p class="text-red-500 text-xs mt-1">Height must be greater than 0.</p>
+                    }
+                </div>
+
+                <!-- Weight -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Weight (kg):</label>
+                    <input type="number" @bind="Weight" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 h-12" placeholder="Enter weight (kg)" />
+                    @if (Weight <= 0 && HasSubmitted)
+                    {
+                        <p class="text-red-500 text-xs mt-1">Weight must be greater than 0.</p>
+                    }
+                </div>
+
+                <!-- Age -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Age:</label>
+                    <input type="number" @bind="Age" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 h-12" placeholder="Enter age" />
+                    @if (Age <= 0 && HasSubmitted)
+                    {
+                        <p class="text-red-500 text-xs mt-1">Age must be greater than 0.</p>
+                    }
+                </div>
+
+                <!-- Activity Level -->
+                <div class="sm:col-span-2">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Activity Level:</label>
+                    <select @bind="ActivityLevel" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 h-12">
+                        <option value="1.2">Sedentary (little or no exercise)</option>
+                        <option value="1.375">Light (light exercise 1-3 days/week)</option>
+                        <option value="1.55">Moderate (moderate exercise 3-5 days/week)</option>
+                        <option value="1.725">Active (heavy exercise 6-7 days/week)</option>
+                        <option value="1.9">Very Active (very heavy exercise, physical job)</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Calculate button -->
+            <div class="text-center">
+                <button @onclick="CalculateBMR" disabled="@_isProcessing" class="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 h-12">
+                    @if (_isProcessing)
+                    {
+                        <span>Calculating...</span>
+                    }
+                    else
+                    {
+                        <span>Calculate BMR</span>
+                    }
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Results -->
+    @if (BMR > 0)
+    {
+        <div class="bg-white p-6 rounded-2xl shadow-xl animate-slide-in">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-xl font-semibold text-gray-800">Results</h3>
+                <button @onclick="CopyToClipboard" disabled="@_isCopying" class="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all duration-200 shadow-md">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                    @if (_isCopying)
+                    {
+                        <span>Copying...</span>
+                    }
+                    else
+                    {
+                        <span>Copy Result</span>
+                    }
+                </button>
+            </div>
+            <div class="space-y-2">
+                <p><strong>Your BMR:</strong> <span class="text-blue-600 font-semibold">@BMR.ToString("N0") calories/day</span></p>
+                <p><strong>Daily Calorie Needs:</strong> <span class="text-blue-600 font-semibold">@DailyCalories.ToString("N0") calories/day</span></p>
+            </div>
+        </div>
+    }
+    else if (HasSubmitted && (Height <= 0 || Weight <= 0 || Age <= 0))
+    {
+        <div class="bg-white p-6 rounded-2xl shadow-xl animate-slide-in">
+            <div class="text-center">
+                <p class="text-red-600">Please enter valid information to calculate BMR.</p>
+            </div>
+        </div>
+    }
+</div>
+
+<!-- Toast Notification -->
+@if (_showToast)
+{
+    <div class="fixed bottom-6 right-6 z-50 animate-toast-in">
+        <div class="flex items-center bg-@(_toastSuccess ? "green" : "red")-500 text-white px-4 py-3 rounded-lg shadow-lg">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="@(_toastSuccess ? "M5 13l4 4L19 7" : "M6 18L18 6M6 6l12 12")" />
+            </svg>
+            <span>@_toastMessage</span>
+        </div>
+    </div>
+}
+
+<style>
+    /* Custom Animations */
+    @@keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+
+    @@keyframes slideIn {
+        from { transform: translateY(-20px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+    }
+
+    @@keyframes toastIn {
+        from { transform: translateY(20px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+    }
+
+    @@keyframes toastOut {
+        from { transform: translateY(0); opacity: 1; }
+        to { transform: translateY(20px); opacity: 0; }
+    }
+
+    .animate-fade-in {
+        animation: fadeIn 0.5s ease-in-out;
+    }
+
+    .animate-slide-in {
+        animation: slideIn 0.5s ease-in-out;
+    }
+
+    .animate-toast-in {
+        animation: toastIn 0.3s ease-in-out;
+    }
+
+    .animate-toast-out {
+        animation: toastOut 0.3s ease-in-out forwards;
+    }
+</style>
+
+@code {
+    private string Gender { get; set; } = "Male";
+    private double Height { get; set; }
+    private double Weight { get; set; }
+    private int Age { get; set; }
+    private double ActivityLevel { get; set; } = 1.2; // Default: sedentary
+    private double BMR { get; set; }
+    private double DailyCalories { get; set; }
+    private bool HasSubmitted { get; set; }
+    private bool _isProcessing = false;
+    private bool _isCopying = false;
+    private bool _showToast = false;
+    private bool _toastSuccess = false;
+    private string _toastMessage = "";
+
+    // Metadata for the tool
+    public override string Name => "Calculate BMR";
+    public override string Description => "Calculate your Basal Metabolic Rate (BMR) and daily calorie needs.";
+    public override string Slug => "calculate-bmr";
+    public override string Group => "Measure Tools";
+    public override string Icon => "⚖️";
+
+    private async Task CalculateBMR()
+    {
+        HasSubmitted = true;
+
+        if (Height <= 0 || Weight <= 0 || Age <= 0)
+        {
+            BMR = 0;
+            DailyCalories = 0;
+            ShowToast(false, "Please enter valid information.");
+            return;
+        }
+
+        _isProcessing = true;
+        try
+        {
+            // Simulate processing delay
+            await Task.Delay(500);
+
+            // Calculate BMR using the Mifflin-St Jeor equation
+            if (Gender == "Male")
+            {
+                BMR = 10 * Weight + 6.25 * Height - 5 * Age + 5;
+            }
+            else
+            {
+                BMR = 10 * Weight + 6.25 * Height - 5 * Age - 161;
+            }
+
+            // Calculate daily calorie needs based on activity level
+            DailyCalories = BMR * ActivityLevel;
+
+            if (BMR <= 0 || DailyCalories <= 0)
+            {
+                ShowToast(false, "Invalid result. Please check your inputs.");
+            }
+        }
+        catch (Exception ex)
+        {
+            ShowToast(false, $"Error: {ex.Message}");
+        }
+        finally
+        {
+            _isProcessing = false;
+        }
+    }
+
+    private async Task CopyToClipboard()
+    {
+        if (BMR <= 0) return;
+
+        _isCopying = true;
+        try
+        {
+            string resultText = $"BMR: {BMR:N0} calories/day\nDaily Calorie Needs: {DailyCalories:N0} calories/day";
+            await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", resultText);
+            ShowToast(true, "Result copied to clipboard!");
+        }
+        catch (Exception ex)
+        {
+            ShowToast(false, $"Failed to copy: {ex.Message}");
+        }
+        finally
+        {
+            _isCopying = false;
+        }
+    }
+
+    private async void ShowToast(bool success, string message)
+    {
+        _toastSuccess = success;
+        _toastMessage = message;
+        _showToast = true;
+        await Task.Delay(3000);
+        _showToast = false;
+    }
+}

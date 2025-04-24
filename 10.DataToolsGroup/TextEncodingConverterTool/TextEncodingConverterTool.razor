@@ -1,0 +1,266 @@
+﻿@using it_tools.ToolDevelopment.Base
+@using it_tools.ToolDevelopment.Attributes
+@using Microsoft.JSInterop
+@using System.Text
+@inject IJSRuntime JSRuntime
+@inherits ToolComponentBase
+
+<div class="p-6 bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen">
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-8 animate-fade-in">
+        <div>
+            <h2 class="text-3xl font-extrabold text-gray-900 tracking-tight">@Name</h2>
+            <p class="text-gray-600 mt-1">@Description</p>
+        </div>
+    </div>
+
+    <!-- Form -->
+    <div class="bg-white p-6 rounded-2xl shadow-xl mb-6 animate-slide-in">
+        <div class="space-y-4">
+            <div class="flex items-end space-x-4">
+                <div class="flex-1">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Source Encoding:</label>
+                    <select @bind="_sourceEncoding" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 h-12">
+                        <option value="UTF-8">UTF-8</option>
+                        <option value="ASCII">ASCII</option>
+                        <option value="Base64">Base64</option>
+                        <option value="Hex">Hex</option>
+                    </select>
+                </div>
+                <div class="flex-1">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Target Encoding:</label>
+                    <select @bind="_targetEncoding" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 h-12">
+                        <option value="UTF-8">UTF-8</option>
+                        <option value="ASCII">ASCII</option>
+                        <option value="Base64">Base64</option>
+                        <option value="Hex">Hex</option>
+                    </select>
+                </div>
+                <div class="self-end">
+                    <button @onclick="ConvertEncoding" disabled="@_isProcessing" class="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 h-12">
+                        @if (_isProcessing)
+                        {
+                            <span>Converting...</span>
+                        }
+                        else
+                        {
+                            <span>Convert</span>
+                        }
+                    </button>
+                </div>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Input Text:</label>
+                <textarea @bind="_inputText" rows="8" placeholder="Enter text to convert..." class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 resize-y"></textarea>
+            </div>
+        </div>
+    </div>
+
+    <!-- Results -->
+    @if (_convertedText != null)
+    {
+        <div class="bg-white p-6 rounded-2xl shadow-xl animate-slide-in">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-xl font-semibold text-gray-800">Converted Text</h3>
+                <button @onclick="CopyToClipboard" disabled="@_isCopying" class="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all duration-200 shadow-md">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                    @if (_isCopying)
+                    {
+                        <span>Copying...</span>
+                    }
+                    else
+                    {
+                        <span>Copy Result</span>
+                    }
+                </button>
+            </div>
+            <div class="space-y-2">
+                <p><strong>Result (@_targetEncoding):</strong></p>
+                <pre class="p-4 bg-gray-100 rounded-lg whitespace-pre-wrap">@_convertedText</pre>
+            </div>
+        </div>
+    }
+</div>
+
+<!-- Toast Notification -->
+@if (_showToast)
+{
+    <div class="fixed bottom-6 right-6 z-50 animate-toast-in">
+        <div class="flex items-center bg-@(_toastSuccess ? "green" : "red")-500 text-white px-4 py-3 rounded-lg shadow-lg">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="@(_toastSuccess ? "M5 13l4 4L19 7" : "M6 18L18 6M6 6l12 12")" />
+            </svg>
+            <span>@_toastMessage</span>
+        </div>
+    </div>
+}
+
+<style>
+    /* Custom Animations */
+    @@keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+
+    @@keyframes slideIn {
+        from { transform: translateY(-20px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+    }
+
+    @@keyframes toastIn {
+        from { transform: translateY(20px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+    }
+
+    @@keyframes toastOut {
+        from { transform: translateY(0); opacity: 1; }
+        to { transform: translateY(20px); opacity: 0; }
+    }
+
+    .animate-fade-in {
+        animation: fadeIn 0.5s ease-in-out;
+    }
+
+    .animate-slide-in {
+        animation: slideIn 0.5s ease-in-out;
+    }
+
+    .animate-toast-in {
+        animation: toastIn 0.3s ease-in-out;
+    }
+
+    .animate-toast-out {
+        animation: toastOut 0.3s ease-in-out forwards;
+    }
+</style>
+
+@code {
+    private string _sourceEncoding = "UTF-8";
+    private string _targetEncoding = "Base64";
+    private string _inputText = "";
+    private string? _convertedText;
+    private bool _isProcessing = false;
+    private bool _isCopying = false;
+    private bool _showToast = false;
+    private bool _toastSuccess = false;
+    private string _toastMessage = "";
+
+    // Metadata cho công cụ
+    public override string Name => "Text Encoding Converter";
+    public override string Description => "Convert text between different encodings like UTF-8, ASCII, Base64, and Hex.";
+    public override string Slug => "text-encoding-converter";
+    public override string Group => "Data Tools";
+    public override string Icon => "🔄";
+
+    private async Task ConvertEncoding()
+    {
+        if (string.IsNullOrWhiteSpace(_inputText))
+        {
+            ShowToast(false, "Please enter text to convert.");
+            return;
+        }
+
+        if (_sourceEncoding == _targetEncoding)
+        {
+            ShowToast(false, "Source and target encodings must be different.");
+            return;
+        }
+
+        _isProcessing = true;
+        try
+        {
+            // Simulate processing delay
+            await Task.Delay(500);
+
+            // Step 1: Decode the input text based on source encoding
+            byte[] bytes = DecodeText(_inputText, _sourceEncoding);
+
+            // Step 2: Encode the bytes to the target encoding
+            _convertedText = EncodeText(bytes, _targetEncoding);
+
+            if (string.IsNullOrEmpty(_convertedText))
+            {
+                ShowToast(false, "Conversion resulted in empty text.");
+            }
+        }
+        catch (Exception ex)
+        {
+            ShowToast(false, $"Error: {ex.Message}");
+        }
+        finally
+        {
+            _isProcessing = false;
+        }
+    }
+
+    private byte[] DecodeText(string text, string encoding)
+    {
+        return encoding switch
+        {
+            "UTF-8" => Encoding.UTF8.GetBytes(text),
+            "ASCII" => Encoding.ASCII.GetBytes(text),
+            "Base64" => Convert.FromBase64String(text),
+            "Hex" => ConvertHexToBytes(text),
+            _ => throw new NotSupportedException($"Unsupported source encoding: {encoding}")
+        };
+    }
+
+    private string EncodeText(byte[] bytes, string encoding)
+    {
+        return encoding switch
+        {
+            "UTF-8" => Encoding.UTF8.GetString(bytes),
+            "ASCII" => Encoding.ASCII.GetString(bytes),
+            "Base64" => Convert.ToBase64String(bytes),
+            "Hex" => BitConverter.ToString(bytes).Replace("-", "").ToLower(),
+            _ => throw new NotSupportedException($"Unsupported target encoding: {encoding}")
+        };
+    }
+
+    private byte[] ConvertHexToBytes(string hex)
+    {
+        hex = hex.Replace(" ", "").Replace("-", "");
+        if (hex.Length % 2 != 0)
+        {
+            throw new FormatException("Hex string must have an even number of characters.");
+        }
+
+        byte[] bytes = new byte[hex.Length / 2];
+        for (int i = 0; i < hex.Length; i += 2)
+        {
+            bytes[i / 2] = Convert.ToByte(hex.Substring(i, 2), 16);
+        }
+        return bytes;
+    }
+
+    private async Task CopyToClipboard()
+    {
+        if (string.IsNullOrEmpty(_convertedText)) return;
+
+        _isCopying = true;
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", _convertedText);
+            ShowToast(true, "Result copied to clipboard!");
+        }
+        catch (Exception ex)
+        {
+            ShowToast(false, $"Failed to copy: {ex.Message}");
+        }
+        finally
+        {
+            _isCopying = false;
+        }
+    }
+
+    private async void ShowToast(bool success, string message)
+    {
+        _toastSuccess = success;
+        _toastMessage = message;
+        _showToast = true;
+        await Task.Delay(3000);
+        _showToast = false;
+    }
+}

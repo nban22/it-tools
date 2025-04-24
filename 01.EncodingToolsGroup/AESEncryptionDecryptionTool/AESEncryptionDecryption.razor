@@ -1,0 +1,229 @@
+﻿@using it_tools.ToolDevelopment.Base
+@using it_tools.ToolDevelopment.Attributes
+@using System.Security.Cryptography
+@using System.IO
+@attribute [ToolComponentAttribute(true)]
+@inherits ToolComponentBase
+
+<div class="p-4 bg-white rounded-lg shadow-md">
+    <h2 class="text-xl font-bold mb-4">@Name</h2>
+    <p class="text-gray-600 mb-6">@Description</p>
+    
+    <!-- Tool UI -->
+    <div class="space-y-4">
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Text:</label>
+            <textarea @bind="_inputText" class="w-full px-3 py-2 border border-gray-300 rounded-md" rows="5"></textarea>
+        </div>
+        
+        <div class="flex flex-col space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Encryption Key:</label>
+                <input type="@(_showKey ? "text" : "password")" @bind="_key" class="w-full px-3 py-2 border border-gray-300 rounded-md" />
+                <div class="mt-1 flex items-center">
+                    <input type="checkbox" id="showKey" @bind="_showKey" class="mr-2" />
+                    <label for="showKey" class="text-sm text-gray-600">Show Key</label>
+                </div>
+                <p class="text-xs text-gray-500 mt-1">Key must be between 8 and 32 characters</p>
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Initialization Vector (IV):</label>
+                <input type="@(_showIV ? "text" : "password")" @bind="_iv" class="w-full px-3 py-2 border border-gray-300 rounded-md" />
+                <div class="mt-1 flex items-center">
+                    <input type="checkbox" id="showIV" @bind="_showIV" class="mr-2" />
+                    <label for="showIV" class="text-sm text-gray-600">Show IV</label>
+                </div>
+                <p class="text-xs text-gray-500 mt-1">IV must be exactly 16 characters</p>
+            </div>
+            
+            <div class="flex flex-row space-x-2">
+                <button @onclick="GenerateRandomKey" class="px-3 py-1 bg-gray-500 text-white rounded-md text-sm">
+                    Generate Random Key
+                </button>
+                <button @onclick="GenerateRandomIV" class="px-3 py-1 bg-gray-500 text-white rounded-md text-sm">
+                    Generate Random IV
+                </button>
+            </div>
+        </div>
+        
+        <div class="flex space-x-2">
+            <button @onclick="Encrypt" class="px-4 py-2 bg-blue-600 text-white rounded-md">
+                Encrypt AES
+            </button>
+            <button @onclick="Decrypt" class="px-4 py-2 bg-green-600 text-white rounded-md">
+                Decrypt AES
+            </button>
+        </div>
+        
+        @if (!string.IsNullOrEmpty(_outputText))
+        {
+            <div class="mt-4">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Result:</label>
+                <div class="p-3 bg-gray-50 rounded-md">
+                    <textarea readonly class="w-full bg-transparent border-none" rows="5">@_outputText</textarea>
+                </div>
+            </div>
+        }
+        
+        @if (!string.IsNullOrEmpty(_errorMessage))
+        {
+            <div class="mt-2 p-2 bg-red-50 text-red-700 rounded-md">
+                @_errorMessage
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private string _inputText = "";
+    private string _outputText = "";
+    private string _errorMessage = "";
+    private string _key = "";
+    private string _iv = "";
+    private bool _showKey = false;
+    private bool _showIV = false;
+    
+    // Implement required properties from ToolComponentBase
+    public override string Name => "AES Encoder-Decoder";
+    public override string Description => "Tool for encrypting and decrypting text using AES algorithm";
+    public override string Group => "Encoding Tools";
+    public override string Icon => "🔒";
+    
+    private void GenerateRandomKey()
+    {
+        const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()";
+        var random = new Random();
+        _key = new string(Enumerable.Repeat(chars, 16)
+            .Select(s => s[random.Next(s.Length)]).ToArray());
+    }
+    
+    private void GenerateRandomIV()
+    {
+        const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+        var random = new Random();
+        _iv = new string(Enumerable.Repeat(chars, 16)
+            .Select(s => s[random.Next(s.Length)]).ToArray());
+    }
+    
+    private void Encrypt()
+    {
+        try
+        {
+            _errorMessage = "";
+            _outputText = "";
+            
+            if (string.IsNullOrEmpty(_inputText))
+            {
+                _errorMessage = "Please enter text to encrypt";
+                return;
+            }
+            
+            if (string.IsNullOrEmpty(_key) || _key.Length < 8 || _key.Length > 32)
+            {
+                _errorMessage = "Key must be between 8 and 32 characters";
+                return;
+            }
+            
+            if (string.IsNullOrEmpty(_iv) || _iv.Length != 16)
+            {
+                _errorMessage = "IV must be exactly 16 characters";
+                return;
+            }
+            
+            byte[] keyBytes = CreateKey(_key);
+            byte[] ivBytes = System.Text.Encoding.UTF8.GetBytes(_iv);
+            
+            using (Aes aesAlg = Aes.Create())
+            {
+                aesAlg.Key = keyBytes;
+                aesAlg.IV = ivBytes;
+                aesAlg.Padding = PaddingMode.PKCS7;
+                
+                ICryptoTransform encryptor = aesAlg.CreateEncryptor(aesAlg.Key, aesAlg.IV);
+                
+                using (MemoryStream msEncrypt = new MemoryStream())
+                {
+                    using (CryptoStream csEncrypt = new CryptoStream(msEncrypt, encryptor, CryptoStreamMode.Write))
+                    {
+                        using (StreamWriter swEncrypt = new StreamWriter(csEncrypt))
+                        {
+                            swEncrypt.Write(_inputText);
+                        }
+                    }
+                    
+                    byte[] encrypted = msEncrypt.ToArray();
+                    _outputText = Convert.ToBase64String(encrypted);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Encryption error: {ex.Message}";
+        }
+    }
+    
+    private void Decrypt()
+    {
+        try
+        {
+            _errorMessage = "";
+            _outputText = "";
+            
+            if (string.IsNullOrEmpty(_inputText))
+            {
+                _errorMessage = "Please enter Base64 text to decrypt";
+                return;
+            }
+            
+            if (string.IsNullOrEmpty(_key) || _key.Length < 8 || _key.Length > 32)
+            {
+                _errorMessage = "Key must be between 8 and 32 characters";
+                return;
+            }
+            
+            if (string.IsNullOrEmpty(_iv) || _iv.Length != 16)
+            {
+                _errorMessage = "IV must be exactly 16 characters";
+                return;
+            }
+            
+            byte[] cipherTextBytes = Convert.FromBase64String(_inputText);
+            byte[] keyBytes = CreateKey(_key);
+            byte[] ivBytes = System.Text.Encoding.UTF8.GetBytes(_iv);
+            
+            using (Aes aesAlg = Aes.Create())
+            {
+                aesAlg.Key = keyBytes;
+                aesAlg.IV = ivBytes;
+                aesAlg.Padding = PaddingMode.PKCS7;
+                
+                ICryptoTransform decryptor = aesAlg.CreateDecryptor(aesAlg.Key, aesAlg.IV);
+                
+                using (MemoryStream msDecrypt = new MemoryStream(cipherTextBytes))
+                {
+                    using (CryptoStream csDecrypt = new CryptoStream(msDecrypt, decryptor, CryptoStreamMode.Read))
+                    {
+                        using (StreamReader srDecrypt = new StreamReader(csDecrypt))
+                        {
+                            _outputText = srDecrypt.ReadToEnd();
+                        }
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Decryption error: {ex.Message}. Make sure the input is valid encrypted text and the key/IV are correct.";
+        }
+    }
+    
+    private byte[] CreateKey(string password)
+    {
+        // Create a 256-bit key (32 bytes) from the password
+        using (var deriveBytes = new Rfc2898DeriveBytes(password, new byte[] { 0x49, 0x76, 0x61, 0x6e, 0x20, 0x4d, 0x65, 0x64, 0x76, 0x65, 0x64, 0x65, 0x76 }, 1000))
+        {
+            return deriveBytes.GetBytes(32); // 256 bits
+        }
+    }
+}

@@ -1,0 +1,393 @@
+﻿@using it_tools.ToolDevelopment.Base
+@using it_tools.ToolDevelopment.Attributes
+@using System.IO
+@using Microsoft.JSInterop
+@using System.ComponentModel.DataAnnotations
+@using System.Text.RegularExpressions
+@using Microsoft.AspNetCore.Components.Forms
+@using SixLabors.ImageSharp
+@using SixLabors.ImageSharp.Processing
+@using SixLabors.ImageSharp.Formats
+@attribute [ToolComponentAttribute(true)]
+@inherits ToolComponentBase
+@inject IJSRuntime JSRuntime
+
+<div class="p-6 bg-white rounded-lg shadow-lg">
+    <div class="flex items-center mb-6">
+        <span class="text-3xl mr-3">🔄</span>
+        <div>
+            <h2 class="text-2xl font-bold text-gray-800">@Name</h2>
+            <p class="text-gray-600">@Description</p>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <!-- Left column: Upload and Options -->
+        <div class="space-y-6">
+            <!-- File Upload Section -->
+            <div class="p-5 border border-gray-200 rounded-lg bg-gray-50">
+                <h3 class="text-lg font-medium text-gray-800 mb-4">1. Select Image</h3>
+
+                <div
+                    class="flex flex-col items-center justify-center p-6 border-2 border-dashed border-gray-300 rounded-lg bg-white hover:bg-gray-50 transition-colors">
+                    <svg class="w-10 h-10 text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                        xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z">
+                        </path>
+                    </svg>
+
+                    <InputFile OnChange="LoadImage" class="hidden" id="fileInput"
+                        accept=".jpg,.jpeg,.png,.gif,.bmp,.webp" />
+
+                    <label for="fileInput"
+                        class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors cursor-pointer">
+                        Browse Image
+                    </label>
+
+                    @if (!string.IsNullOrEmpty(_fileName))
+                    {
+                        <p class="mt-3 text-sm text-gray-600">@_fileName</p>
+                    }
+                    else
+                    {
+                        <p class="mt-3 text-sm text-center text-gray-500">JPG, PNG, GIF, BMP or WEBP (max. 10MB)</p>
+                    }
+
+                    @if (!string.IsNullOrEmpty(_errorMessage))
+                    {
+                        <div class="mt-3 p-3 bg-red-50 border border-red-200 rounded-md">
+                            <p class="text-sm text-red-600">@_errorMessage</p>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <!-- Flip Options -->
+            <div class="p-5 border border-gray-200 rounded-lg bg-gray-50">
+                <h3 class="text-lg font-medium text-gray-800 mb-4">2. Flip Options</h3>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="flex items-center p-4 border border-gray-200 rounded-lg bg-white cursor-pointer @(_flipMode == FlipMode.Horizontal ? "ring-2 ring-blue-500" : "")"
+                        @onclick="() => SelectFlipMode(FlipMode.Horizontal)">
+                        <div class="flex-shrink-0 mr-3">
+                            <svg class="w-8 h-8 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                                xmlns="http://www.w3.org/2000/svg">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                    d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path>
+                            </svg>
+                        </div>
+                        <div>
+                            <p class="font-medium text-gray-800">Horizontal</p>
+                            <p class="text-xs text-gray-500">Flip left to right</p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center p-4 border border-gray-200 rounded-lg bg-white cursor-pointer @(_flipMode == FlipMode.Vertical ? "ring-2 ring-blue-500" : "")"
+                        @onclick="() => SelectFlipMode(FlipMode.Vertical)">
+                        <div class="flex-shrink-0 mr-3">
+                            <svg class="w-8 h-8 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                                xmlns="http://www.w3.org/2000/svg">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                    d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"></path>
+                            </svg>
+                        </div>
+                        <div>
+                            <p class="font-medium text-gray-800">Vertical</p>
+                            <p class="text-xs text-gray-500">Flip top to bottom</p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center p-4 border border-gray-200 rounded-lg bg-white cursor-pointer @(_flipMode == FlipMode.Both ? "ring-2 ring-blue-500" : "")"
+                        @onclick="() => SelectFlipMode(FlipMode.Both)">
+                        <div class="flex-shrink-0 mr-3">
+                            <svg class="w-8 h-8 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                                xmlns="http://www.w3.org/2000/svg">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                    d="M8 7h8m0 0l-4-4m4 4l-4 4m-8 2h8m0 0l-4 4m4-4l-4-4"></path>
+                            </svg>
+                        </div>
+                        <div>
+                            <p class="font-medium text-gray-800">Both</p>
+                            <p class="text-xs text-gray-500">Flip horizontally & vertically</p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center p-4 border border-gray-200 rounded-lg bg-white cursor-pointer @(_flipMode == FlipMode.Rotate180 ? "ring-2 ring-blue-500" : "")"
+                        @onclick="() => SelectFlipMode(FlipMode.Rotate180)">
+                        <div class="flex-shrink-0 mr-3">
+                            <svg class="w-8 h-8 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                                xmlns="http://www.w3.org/2000/svg">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                    d="M16 17l-4 4m0 0l-4-4m4 4V7m0 0l4-4m-4 4l-4-4"></path>
+                            </svg>
+                        </div>
+                        <div>
+                            <p class="font-medium text-gray-800">Rotate 180°</p>
+                            <p class="text-xs text-gray-500">Rotate image 180 degrees</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Process Button -->
+            <button @onclick="FlipImage" disabled="@(!_isImageLoaded)"
+                class="w-full py-3 bg-blue-600 text-white font-medium rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                Flip Image
+            </button>
+
+            @if (_isProcessing)
+            {
+                <div class="py-2 text-center">
+                    <div class="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                    <span class="ml-2 text-gray-600">Processing...</span>
+                </div>
+            }
+        </div>
+
+        <!-- Right column: Preview Area -->
+        <div class="space-y-6">
+            <div class="p-5 border border-gray-200 rounded-lg bg-gray-50 h-full">
+                <h3 class="text-lg font-medium text-gray-800 mb-4">Image Preview</h3>
+
+                @if (_isImageLoaded)
+                {
+                    <div class="flex flex-col items-center space-y-4">
+                        <div
+                            class="relative w-full overflow-hidden rounded-lg border border-gray-300 bg-white flex justify-center">
+                            <img src="@_previewImageUrl" alt="Preview" class="max-w-full object-contain"
+                                style="max-height: 400px;" />
+                        </div>
+
+                        @if (_isResultReady)
+                        {
+                            <div class="flex space-x-3 w-full">
+                                <button @onclick="SaveImage"
+                                    class="flex-1 py-2 bg-green-600 text-white font-medium rounded-md hover:bg-green-700 transition-colors flex items-center justify-center">
+                                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                                        xmlns="http://www.w3.org/2000/svg">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                                    </svg>
+                                    Download Image
+                                </button>
+
+                                <button @onclick="Reset"
+                                    class="px-4 py-2 bg-gray-200 text-gray-700 font-medium rounded-md hover:bg-gray-300 transition-colors">
+                                    Reset
+                                </button>
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div
+                        class="h-64 flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 bg-gray-100">
+                        <svg class="w-12 h-12 text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                            xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z">
+                            </path>
+                        </svg>
+                        <p class="text-gray-500">Upload an image to see preview</p>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-6 text-sm text-gray-500">
+        <p>Note: All processing is done locally in your browser. Your images are not uploaded to any server.</p>
+    </div>
+</div>
+
+@code {
+    // Required properties from ToolComponentBase
+    public override string Name => "Image Flipper";
+    public override string Description => "Flip or mirror your images horizontally, vertically, or both";
+    public override string Group => "Image and Video Tools";
+    public override string Icon => "🔄";
+
+    // Image properties
+    private string _fileName = "";
+    private string _errorMessage = "";
+    private bool _isImageLoaded = false;
+    private bool _isProcessing = false;
+    private bool _isResultReady = false;
+    private string _previewImageUrl = "";
+    private byte[] _originalImageData;
+    private byte[] _flippedImageData;
+    private FlipMode _flipMode = FlipMode.Horizontal;
+    private string _contentType = "";
+
+    // File size limit - 10MB
+    private const long MaxFileSize = 10 * 1024 * 1024;
+
+    private enum FlipMode
+    {
+        Horizontal,
+        Vertical,
+        Both,
+        Rotate180
+    }
+
+    private void SelectFlipMode(FlipMode mode)
+    {
+        _flipMode = mode;
+    }
+
+    private async Task LoadImage(InputFileChangeEventArgs e)
+    {
+        try
+        {
+            _errorMessage = "";
+            _isImageLoaded = false;
+            _isResultReady = false;
+
+            var file = e.File;
+            _fileName = file.Name;
+
+            // Check file size
+            if (file.Size > MaxFileSize)
+            {
+                _errorMessage = "Image size must be less than 10MB.";
+                return;
+            }
+
+            // Check file type
+            var extension = Path.GetExtension(file.Name).ToLowerInvariant();
+            if (!new[] { ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp" }.Contains(extension))
+            {
+                _errorMessage = "Please select a valid image file (jpg, png, gif, bmp, webp).";
+                return;
+            }
+
+            // Set content type based on extension
+            _contentType = extension switch
+            {
+                ".jpg" or ".jpeg" => "image/jpeg",
+                ".png" => "image/png",
+                ".gif" => "image/gif",
+                ".bmp" => "image/bmp",
+                ".webp" => "image/webp",
+                _ => "application/octet-stream"
+            };
+
+            // Load the file data
+            using var stream = file.OpenReadStream(MaxFileSize);
+            _originalImageData = new byte[file.Size];
+            await stream.ReadAsync(_originalImageData);
+
+            // Create a data URL for the preview
+            _previewImageUrl = $"data:{_contentType};base64,{Convert.ToBase64String(_originalImageData)}";
+            _isImageLoaded = true;
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Error loading image: {ex.Message}";
+        }
+    }
+
+    private async Task FlipImage()
+    {
+        if (!_isImageLoaded) return;
+
+        try
+        {
+            _isProcessing = true;
+            _isResultReady = false;
+
+            // Give UI time to update
+            await Task.Delay(100);
+
+            // Process image with ImageSharp
+            using var imageStream = new MemoryStream(_originalImageData);
+            using var outputStream = new MemoryStream();
+
+            using (var image = await SixLabors.ImageSharp.Image.LoadAsync(imageStream))
+            {
+                // Apply flip operations based on the selected mode
+                switch (_flipMode)
+                {
+                    case FlipMode.Horizontal:
+                        image.Mutate(x => x.Flip(SixLabors.ImageSharp.Processing.FlipMode.Horizontal));
+                        break;
+                    case FlipMode.Vertical:
+                        image.Mutate(x => x.Flip(SixLabors.ImageSharp.Processing.FlipMode.Vertical));
+                        break;
+                    case FlipMode.Both:
+                        image.Mutate(x => x.Flip(SixLabors.ImageSharp.Processing.FlipMode.Horizontal));
+                        image.Mutate(x => x.Flip(SixLabors.ImageSharp.Processing.FlipMode.Vertical));
+                        break;
+                    case FlipMode.Rotate180:
+                        image.Mutate(x => x.Rotate(180));
+                        break;
+                }
+
+                // Save to stream
+                await image.SaveAsync(outputStream, image.Metadata.DecodedImageFormat);
+            }
+
+            // Get the processed image data
+            _flippedImageData = outputStream.ToArray();
+            _previewImageUrl = $"data:{_contentType};base64,{Convert.ToBase64String(_flippedImageData)}";
+            _isResultReady = true;
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Error processing image: {ex.Message}";
+        }
+        finally
+        {
+            _isProcessing = false;
+        }
+    }
+
+    private async Task SaveImage()
+    {
+        if (!_isResultReady) return;
+
+        try
+        {
+            // Generate a file name
+            var fileNameWithoutExt = Path.GetFileNameWithoutExtension(_fileName);
+            var extension = Path.GetExtension(_fileName);
+            var newFileName = $"{fileNameWithoutExt}_flipped{extension}";
+
+            // Use JS interop to download the file
+            await JSRuntime.InvokeVoidAsync("downloadFile",
+            Convert.ToBase64String(_flippedImageData),
+            _contentType,
+            newFileName);
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Error saving image: {ex.Message}";
+        }
+    }
+
+    private void Reset()
+    {
+        _previewImageUrl = $"data:{_contentType};base64,{Convert.ToBase64String(_originalImageData)}";
+        _isResultReady = false;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Add JavaScript function for downloading files
+            await JSRuntime.InvokeVoidAsync("eval", @"
+window.downloadFile = function(base64Data, contentType, fileName) {
+const link = document.createElement('a');
+link.href = `data:${contentType};base64,${base64Data}`;
+link.download = fileName;
+document.body.appendChild(link);
+link.click();
+document.body.removeChild(link);
+};
+");
+        }
+    }
+}

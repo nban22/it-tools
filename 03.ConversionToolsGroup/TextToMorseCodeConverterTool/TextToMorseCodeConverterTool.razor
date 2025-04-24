@@ -1,0 +1,533 @@
+﻿@using it_tools.ToolDevelopment.Base
+@using it_tools.ToolDevelopment.Attributes
+@using System.Text
+@using System.Collections.Generic
+@attribute [ToolComponentAttribute(true)]
+@inherits ToolComponentBase
+
+<div class="p-6 bg-white rounded-lg shadow-lg">
+    <div class="flex items-center mb-6">
+        <div class="mr-3 bg-indigo-100 p-2 rounded-lg">
+            <span class="text-2xl">@Icon</span>
+        </div>
+        <div>
+            <h2 class="text-2xl font-bold text-gray-800">@Name</h2>
+            <p class="text-gray-600">@Description</p>
+        </div>
+    </div>
+    
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- Input Panel -->
+        <div class="bg-gray-50 p-5 rounded-lg border border-gray-200">
+            <h3 class="text-lg font-semibold text-gray-700 mb-4">Input</h3>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Conversion Direction</label>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div class="flex items-center p-3 rounded-md border border-gray-200 @(_conversionDirection == "textToMorse" ? "bg-indigo-50 border-indigo-300" : "bg-white")" @onclick="@(() => _conversionDirection = "textToMorse")">
+                            <div class="text-xl mr-2 @(_conversionDirection == "textToMorse" ? "text-indigo-500" : "text-gray-500")">Aa</div>
+                            <span class="text-sm font-medium @(_conversionDirection == "textToMorse" ? "text-indigo-700" : "text-gray-700")">Text to Morse</span>
+                        </div>
+                        <div class="flex items-center p-3 rounded-md border border-gray-200 @(_conversionDirection == "morseToText" ? "bg-indigo-50 border-indigo-300" : "bg-white")" @onclick="@(() => _conversionDirection = "morseToText")">
+                            <div class="text-xl mr-2 @(_conversionDirection == "morseToText" ? "text-indigo-500" : "text-gray-500")">•−</div>
+                            <span class="text-sm font-medium @(_conversionDirection == "morseToText" ? "text-indigo-700" : "text-gray-700")">Morse to Text</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                        @(_conversionDirection == "textToMorse" ? "Text to Convert" : "Morse Code to Convert")
+                    </label>
+                    <textarea 
+                        @bind="_inputText" 
+                        class="w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 h-32"
+                        placeholder="@(_conversionDirection == "textToMorse" ? "Enter text to convert to Morse code..." : "Enter Morse code to convert to text...")"></textarea>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Options</label>
+                    
+                    <div class="grid grid-cols-2 gap-3 mb-3">
+                        <div class="space-y-2">
+                            <div class="flex items-center">
+                                <input 
+                                    type="checkbox" 
+                                    id="includeNonLatin" 
+                                    @bind="_includeNonLatin" 
+                                    class="mr-2 h-4 w-4 text-indigo-600 focus:ring-indigo-500 rounded" />
+                                <label for="includeNonLatin" class="text-sm text-gray-700">Include non-Latin characters</label>
+                            </div>
+                            
+                            <div class="flex items-center">
+                                <input 
+                                    type="checkbox" 
+                                    id="includeNumbers" 
+                                    @bind="_includeNumbers" 
+                                    class="mr-2 h-4 w-4 text-indigo-600 focus:ring-indigo-500 rounded" />
+                                <label for="includeNumbers" class="text-sm text-gray-700">Include numbers</label>
+                            </div>
+                            
+                            <div class="flex items-center">
+                                <input 
+                                    type="checkbox" 
+                                    id="includeSpecialChars" 
+                                    @bind="_includeSpecialChars" 
+                                    class="mr-2 h-4 w-4 text-indigo-600 focus:ring-indigo-500 rounded" />
+                                <label for="includeSpecialChars" class="text-sm text-gray-700">Include special characters</label>
+                            </div>
+                        </div>
+                        
+                        <div class="space-y-2">
+                            <div class="flex items-center">
+                                <input 
+                                    type="checkbox" 
+                                    id="soundOutput" 
+                                    @bind="_soundOutput" 
+                                    class="mr-2 h-4 w-4 text-indigo-600 focus:ring-indigo-500 rounded" />
+                                <label for="soundOutput" class="text-sm text-gray-700">Sound output</label>
+                            </div>
+                            
+                            <div class="flex items-center">
+                                <input 
+                                    type="checkbox" 
+                                    id="visualizeOutput" 
+                                    @bind="_visualizeOutput" 
+                                    class="mr-2 h-4 w-4 text-indigo-600 focus:ring-indigo-500 rounded" />
+                                <label for="visualizeOutput" class="text-sm text-gray-700">Visualize output</label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4">
+                        <label for="morseSpeed" class="block text-sm font-medium text-gray-700 mb-1">Morse Speed</label>
+                        <div class="flex items-center space-x-2">
+                            <span class="text-xs text-gray-500">Slow</span>
+                            <input 
+                                type="range" 
+                                id="morseSpeed" 
+                                @bind="_morseSpeed" 
+                                min="1" 
+                                max="10" 
+                                class="flex-grow h-1 rounded-lg appearance-none cursor-pointer bg-gray-300" />
+                            <span class="text-xs text-gray-500">Fast</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-3">
+                    <button 
+                        @onclick="ClearInput" 
+                        class="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium rounded-md shadow-sm transition duration-150 ease-in-out">
+                        Clear
+                    </button>
+                    <button 
+                        @onclick="Convert" 
+                        class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-md shadow-sm transition duration-150 ease-in-out">
+                        Convert
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Morse Code Reference -->
+            <div class="mt-6">
+                <div class="flex items-center justify-between mb-2">
+                    <h4 class="text-sm font-semibold text-gray-700">Morse Code Reference</h4>
+                    <button 
+                        @onclick="@(() => _showReference = !_showReference)" 
+                        class="text-xs text-indigo-600 hover:text-indigo-800">
+                        @(_showReference ? "Hide Reference" : "Show Reference")
+                    </button>
+                </div>
+                
+                @if (_showReference)
+                {
+                    <div class="p-3 bg-white rounded-lg border border-gray-200 text-sm">
+                        <div class="grid grid-cols-5 gap-1">
+                            @foreach (var kvp in _morseCodeMap.OrderBy(k => k.Key))
+                            {
+                                <div class="flex items-center justify-between p-1 border-b border-gray-100">
+                                    <span class="font-semibold">@kvp.Key</span>
+                                    <span class="font-mono text-gray-600">@kvp.Value</span>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+        
+        <!-- Output Panel -->
+        <div class="bg-gray-50 p-5 rounded-lg border border-gray-200">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold text-gray-700">Output</h3>
+                
+                @if (!string.IsNullOrEmpty(_outputText))
+                {
+                    <div class="flex space-x-2">
+                        <button 
+                            @onclick="CopyOutput" 
+                            class="px-3 py-1 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-md text-sm flex items-center transition duration-150 ease-in-out">
+                            Copy
+                        </button>
+                        <button 
+                            @onclick="@PlayMorseCode" 
+                            class="px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md text-sm flex items-center transition duration-150 ease-in-out">
+                            Play
+                        </button>
+                    </div>
+                }
+            </div>
+            
+            <div class="h-32 overflow-auto border border-gray-200 rounded-md bg-white p-3 mb-4">
+                @if (!string.IsNullOrEmpty(_outputText))
+                {
+                    <pre class="text-sm text-gray-800 whitespace-pre-wrap">@_outputText</pre>
+                }
+                else
+                {
+                    <div class="h-full flex items-center justify-center text-gray-400">
+                        <p>Converted output will appear here</p>
+                    </div>
+                }
+            </div>
+            
+            @if (!string.IsNullOrEmpty(_statusMessage))
+            {
+                <div class="p-3 mb-4 rounded-md @(_isError ? "bg-red-50 text-red-800 border border-red-200" : "bg-green-50 text-green-800 border border-green-200")">
+                    <p class="text-sm">@_statusMessage</p>
+                </div>
+            }
+            
+            @if (_visualizeOutput && !string.IsNullOrEmpty(_outputText) && _conversionDirection == "textToMorse")
+            {
+                <div class="mb-4">
+                    <h4 class="text-sm font-semibold text-gray-700 mb-2">Visual Representation</h4>
+                    <div class="p-3 bg-white rounded-lg border border-gray-200 overflow-x-auto">
+                        <div class="flex">
+                            @foreach (var c in _outputText)
+                            {
+                                @if (c == '.')
+                                {
+                                    <div class="w-4 h-4 bg-indigo-600 rounded-full mx-1"></div>
+                                }
+                                else if (c == '-')
+                                {
+                                    <div class="w-10 h-4 bg-indigo-800 rounded-md mx-1"></div>
+                                }
+                                else if (c == ' ')
+                                {
+                                    <div class="w-4 mx-1"></div>
+                                }
+                                else if (c == '/')
+                                {
+                                    <div class="h-6 border-l-2 border-gray-300 mx-3"></div>
+                                }
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+            
+            <!-- Conversion Statistics -->
+            @if (!string.IsNullOrEmpty(_outputText))
+            {
+                <div class="mb-4">
+                    <h4 class="text-sm font-semibold text-gray-700 mb-2">Conversion Statistics</h4>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="p-3 bg-white rounded-lg border border-gray-200">
+                            <span class="text-xs text-gray-500">Input Length</span>
+                            <p class="text-lg font-semibold text-gray-800">@(_inputText?.Length ?? 0) @(_conversionDirection == "textToMorse" ? "characters" : "symbols")</p>
+                        </div>
+                        <div class="p-3 bg-white rounded-lg border border-gray-200">
+                            <span class="text-xs text-gray-500">Output Length</span>
+                            <p class="text-lg font-semibold text-gray-800">@(_outputText?.Length ?? 0) @(_conversionDirection == "textToMorse" ? "symbols" : "characters")</p>
+                        </div>
+                        <div class="p-3 bg-white rounded-lg border border-gray-200">
+                            <span class="text-xs text-gray-500">@(_conversionDirection == "textToMorse" ? "Dots" : "Letters")</span>
+                            <p class="text-lg font-semibold text-gray-800">@GetOutputElementCount('.')</p>
+                        </div>
+                        <div class="p-3 bg-white rounded-lg border border-gray-200">
+                            <span class="text-xs text-gray-500">@(_conversionDirection == "textToMorse" ? "Dashes" : "Numbers")</span>
+                            <p class="text-lg font-semibold text-gray-800">@GetOutputElementCount('-')</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- International Morse Variants -->
+                @if (_conversionDirection == "textToMorse")
+                {
+                    <div>
+                        <h4 class="text-sm font-semibold text-gray-700 mb-2">International Morse Variants</h4>
+                        <div class="space-y-2">
+                            <div class="p-3 bg-white rounded-lg border border-gray-200">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-sm font-medium text-gray-700">American Morse</span>
+                                    <button 
+                                        @onclick="@(() => CopyVariant("american"))" 
+                                        class="px-2 py-1 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded text-xs">
+                                        Copy
+                                    </button>
+                                </div>
+                                <pre class="mt-1 text-xs text-gray-600 overflow-x-auto">@GetAmericanMorseVariant()</pre>
+                            </div>
+                            
+                            <div class="p-3 bg-white rounded-lg border border-gray-200">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-sm font-medium text-gray-700">ITU Standard</span>
+                                    <button 
+                                        @onclick="@(() => CopyVariant("itu"))" 
+                                        class="px-2 py-1 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded text-xs">
+                                        Copy
+                                    </button>
+                                </div>
+                                <pre class="mt-1 text-xs text-gray-600 overflow-x-auto">@GetITUStandardVariant()</pre>
+                            </div>
+                        </div>
+                    </div>
+                }
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private string _inputText = "";
+    private string _outputText = "";
+    private string _statusMessage = "";
+    private bool _isError = false;
+    
+    private string _conversionDirection = "textToMorse";
+    private bool _includeNonLatin = true;
+    private bool _includeNumbers = true;
+    private bool _includeSpecialChars = true;
+    private bool _soundOutput = false;
+    private bool _visualizeOutput = true;
+    private int _morseSpeed = 5;
+    private bool _showReference = false;
+    
+    // Implement required properties from ToolComponentBase
+    public override string Name => "Text ↔ Morse Code Converter";
+    public override string Description => "Convert text to Morse code and vice versa";
+    public override string Group => "Conversion Tools";
+    public override string Icon => "📡";
+    
+    // Morse code mapping dictionary
+    private Dictionary<char, string> _morseCodeMap = new Dictionary<char, string>
+    {
+        // Letters
+        {'A', ".-"}, {'B', "-..."}, {'C', "-.-."}, {'D', "-.."}, {'E', "."},
+        {'F', "..-."}, {'G', "--."}, {'H', "...."}, {'I', ".."}, {'J', ".---"},
+        {'K', "-.-"}, {'L', ".-.."}, {'M', "--"}, {'N', "-."}, {'O', "---"},
+        {'P', ".--."}, {'Q', "--.-"}, {'R', ".-."}, {'S', "..."}, {'T', "-"},
+        {'U', "..-"}, {'V', "...-"}, {'W', ".--"}, {'X', "-..-"}, {'Y', "-.--"},
+        {'Z', "--.."},
+        
+        // Numbers
+        {'0', "-----"}, {'1', ".----"}, {'2', "..---"}, {'3', "...--"}, {'4', "....-"},
+        {'5', "....."}, {'6', "-...."}, {'7', "--..."}, {'8', "---.."}, {'9', "----."},
+        
+        // Special characters
+        {'.', ".-.-.-"}, {',', "--..--"}, {'?', "..--.."}, {'\'', ".----."}, {'!', "-.-.--"},
+        {'/', "-..-."}, {'(', "-.--."}, {')', "-.--.-"}, {'&', ".-..."}, {':', "---..."},
+        {';', "-.-.-."}, {'=', "-...-"}, {'+', ".-.-."}, {'-', "-....-"}, {'_', "..--.-"},
+        {'"', ".-..-."}, {'$', "...-..-"}, {'@', ".--.-."},
+        
+        // Non-Latin characters
+        {'Ä', ".-.-"}, {'Æ', ".-.-"}, {'Å', ".--.-"}, {'À', ".--.-"}, {'Ç', "-.-.."},
+        {'É', "..-.."}, {'Ñ', "--.--"}, {'Ö', "---."}, {'Ø', "---."}, {'Ü', "..--"}
+    };
+    
+    private Dictionary<string, char> _inverseMorseCodeMap;
+    
+    protected override void OnInitialized()
+    {
+        // Create an inverse mapping for Morse code to character conversion
+        _inverseMorseCodeMap = new Dictionary<string, char>();
+        foreach (var kvp in _morseCodeMap)
+        {
+            if (!_inverseMorseCodeMap.ContainsKey(kvp.Value))
+            {
+                _inverseMorseCodeMap.Add(kvp.Value, kvp.Key);
+            }
+        }
+    }
+    
+    private void CopyOutput()
+    {
+        try
+        {
+            _statusMessage = "Copied to clipboard!";
+            _isError = false;
+            // Note: Actual clipboard functionality must be implemented client-side with JS interop
+        }
+        catch (Exception ex)
+        {
+            _statusMessage = $"Error copying to clipboard: {ex.Message}";
+            _isError = true;
+        }
+    }
+    
+    private void CopyVariant(string variant)
+    {
+        try
+        {
+            string variantText = variant == "american" ? GetAmericanMorseVariant() : GetITUStandardVariant();
+            _statusMessage = $"Copied {variant} variant to clipboard!";
+            _isError = false;
+            // Note: Actual clipboard functionality must be implemented client-side with JS interop
+        }
+        catch (Exception ex)
+        {
+            _statusMessage = $"Error copying variant to clipboard: {ex.Message}";
+            _isError = true;
+        }
+    }
+    
+    private void ClearInput()
+    {
+        _inputText = "";
+        _outputText = "";
+        _statusMessage = "";
+    }
+    
+    private void Convert()
+    {
+        try
+        {
+            _statusMessage = "";
+            _isError = false;
+            
+            if (string.IsNullOrWhiteSpace(_inputText))
+            {
+                _statusMessage = "Please enter some text to convert.";
+                _isError = true;
+                return;
+            }
+            
+            if (_conversionDirection == "textToMorse")
+            {
+                _outputText = ConvertTextToMorse(_inputText);
+            }
+            else // morseToText
+            {
+                _outputText = ConvertMorseToText(_inputText);
+            }
+            
+            _statusMessage = "Conversion successful!";
+        }
+        catch (Exception ex)
+        {
+            _statusMessage = $"Error during conversion: {ex.Message}";
+            _isError = true;
+        }
+    }
+    
+    private string ConvertTextToMorse(string text)
+    {
+        StringBuilder result = new StringBuilder();
+        
+        foreach (char c in text.ToUpper())
+        {
+            // Skip non-supported characters based on user options
+            if (!_includeNonLatin && !char.IsLetter(c) && !char.IsWhiteSpace(c) && !_morseCodeMap.ContainsKey(c))
+            {
+                continue;
+            }
+            
+            if (!_includeNumbers && char.IsDigit(c))
+            {
+                continue;
+            }
+            
+            if (!_includeSpecialChars && !char.IsLetterOrDigit(c) && !char.IsWhiteSpace(c))
+            {
+                continue;
+            }
+            
+            if (char.IsWhiteSpace(c))
+            {
+                // Add word separator (typically a forward slash)
+                result.Append("/ ");
+            }
+            else if (_morseCodeMap.TryGetValue(c, out string morseCode))
+            {
+                // Add the Morse code for the character followed by a space
+                result.Append(morseCode);
+                result.Append(" ");
+            }
+            else
+            {
+                // Character not supported in Morse code
+                // You can choose to ignore it or handle it differently
+            }
+        }
+        
+        return result.ToString().Trim();
+    }
+    
+    private string ConvertMorseToText(string morseCode)
+    {
+        StringBuilder result = new StringBuilder();
+        
+        // Split the Morse code by spaces to get individual characters
+        string[] morseWords = morseCode.Split(new[] { '/' }, StringSplitOptions.RemoveEmptyEntries);
+        
+        foreach (string word in morseWords)
+        {
+            string[] morseChars = word.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            
+            foreach (string morseChar in morseChars)
+            {
+                if (_inverseMorseCodeMap.TryGetValue(morseChar, out char character))
+                {
+                    result.Append(character);
+                }
+                else if (!string.IsNullOrWhiteSpace(morseChar))
+                {
+                    // Unknown Morse code
+                    result.Append('?');
+                }
+            }
+            
+            // Add a space between words
+            result.Append(' ');
+        }
+        
+        return result.ToString().Trim();
+    }
+    
+    private void PlayMorseCode()
+    {
+        // This would be implemented with JavaScript interop to play the Morse code as audio
+        _statusMessage = "Sound playback would be implemented with JavaScript in a real application.";
+    }
+    
+    private int GetOutputElementCount(char element)
+    {
+        if (string.IsNullOrEmpty(_outputText))
+            return 0;
+            
+        return _outputText.Count(c => c == element);
+    }
+    
+    private string GetAmericanMorseVariant()
+    {
+        if (_conversionDirection != "textToMorse" || string.IsNullOrEmpty(_outputText))
+            return "";
+            
+        // American Morse uses different spacing and some character variations
+        // This is a simplified conversion for demonstration
+        return _outputText.Replace("-", "–").Replace(".", "•").Replace(" ", "  ");
+    }
+    
+    private string GetITUStandardVariant()
+    {
+        if (_conversionDirection != "textToMorse" || string.IsNullOrEmpty(_outputText))
+            return "";
+            
+        // ITU standard uses specific symbols
+        return _outputText.Replace(".", "•").Replace("-", "–").Replace("/", " / ");
+    }
+}

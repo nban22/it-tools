@@ -1,6 +1,4 @@
-
 using Microsoft.EntityFrameworkCore;
-
 using it_tools.Data.DTOs;
 using it_tools.Data;
 using it_tools.Data.Models;
@@ -13,17 +11,38 @@ public class ToolRepository(IDbContextFactory<ApplicationDbContext> contextFacto
     private readonly IDbContextFactory<ApplicationDbContext> _contextFactory = contextFactory;
     private readonly ILogger<ToolRepository> _logger = logger;
 
-    // Lấy danh sách Tools cho người dùng chưa xác thực (unauthorized)
-    public async Task<Tool?> GetToolByIdAsync(string toolId)
+    public async Task<ToolDto?> GetToolByIdAsync(string toolId)
     {
         try
         {
             using var dbContext = _contextFactory.CreateDbContext();
             var tool = await dbContext.Tools
-                .Include(t => t.Group) // Include the ToolGroup if needed
+                .Include(t => t.Group)
                 .FirstOrDefaultAsync(t => t.Id == toolId);
 
-            return tool;
+            if (tool == null)
+            {
+                return null;
+            }
+
+            return new ToolDto
+            {
+                Id = tool.Id,
+                GroupId = tool.GroupId,
+                Name = tool.Name,
+                Description = tool.Description,
+                DllPath = tool.DllPath,
+                Slug = tool.Slug,
+                Icon = tool.Icon,
+                IsPremium = tool.IsPremium,
+                IsEnabled = tool.IsEnabled,
+                Group = new ToolGroupDto
+                {
+                    Id = tool.GroupId,
+                    Name = tool.Group?.Name ?? string.Empty,
+                    Description = tool.Group?.Description ?? string.Empty
+                }
+            };
         }
         catch (Exception ex)
         {
@@ -31,13 +50,14 @@ public class ToolRepository(IDbContextFactory<ApplicationDbContext> contextFacto
             throw;
         }
     }
+
     public async Task<List<ToolDto>> GetAllToolsForUnauthorizedAsync()
     {
         try
         {
             using var dbContext = _contextFactory.CreateDbContext();
             var tools = await dbContext.Tools
-                .Where(t => t.IsEnabled) // Chỉ lấy các tool đang bật
+                .Where(t => t.IsEnabled)
                 .Select(t => new ToolDto
                 {
                     Id = t.Id,
@@ -61,21 +81,18 @@ public class ToolRepository(IDbContextFactory<ApplicationDbContext> contextFacto
         }
     }
 
-    // Lấy danh sách Tools cho người dùng đã đăng nhập, bao gồm IsFavorite
     public async Task<List<ToolDto>> GetAllToolsForUserAsync(string userId)
     {
         try
         {
             using var dbContext = _contextFactory.CreateDbContext();
-            // Lấy danh sách các ToolId yêu thích của người dùng
             var favoriteToolIds = await dbContext.FavouriteTools
                 .Where(ft => ft.UserId == userId)
                 .Select(ft => ft.ToolId)
                 .ToListAsync();
 
-            // Lấy danh sách Tools và kiểm tra IsFavorite
             var tools = await dbContext.Tools
-                .Where(t => t.IsEnabled) // Chỉ lấy các tool đang bật
+                .Where(t => t.IsEnabled)
                 .Select(t => new ToolDto
                 {
                     Id = t.Id,
@@ -86,7 +103,7 @@ public class ToolRepository(IDbContextFactory<ApplicationDbContext> contextFacto
                     Slug = t.Slug,
                     Icon = t.Icon,
                     IsEnabled = t.IsEnabled,
-                    IsFavorite = favoriteToolIds.Contains(t.Id) // Kiểm tra xem Tool có trong danh sách yêu thích không
+                    IsFavorite = favoriteToolIds.Contains(t.Id)
                 })
                 .ToListAsync();
             return tools;
@@ -97,6 +114,7 @@ public class ToolRepository(IDbContextFactory<ApplicationDbContext> contextFacto
             throw;
         }
     }
+
     public async Task<List<ToolGroupDto>> GetAllToolGroups()
     {
         try
@@ -104,7 +122,7 @@ public class ToolRepository(IDbContextFactory<ApplicationDbContext> contextFacto
             using var dbContext = _contextFactory.CreateDbContext();
             var allTools = await dbContext.ToolGroups
                 .Include(tg => tg.Tools)
-                .Where(tg => tg.Tools.Any(t => t.IsEnabled)) // Only include groups with at least one enabled tool
+                .Where(tg => tg.Tools.Any(t => t.IsEnabled))
                 .Select(tg => new ToolGroupDto
                 {
                     Id = tg.Id,
@@ -123,12 +141,10 @@ public class ToolRepository(IDbContextFactory<ApplicationDbContext> contextFacto
                             Icon = t.Icon,
                             GroupId = t.GroupId,
                             IsEnabled = t.IsEnabled,
-                            IsFavorite = false // Default to false, can be updated later if needed
+                            IsFavorite = false
                         }).ToList()
                 })
                 .ToListAsync();
-
-
 
             return allTools;
         }
@@ -145,7 +161,7 @@ public class ToolRepository(IDbContextFactory<ApplicationDbContext> contextFacto
         {
             using var dbContext = _contextFactory.CreateDbContext();
             var favoriteToolIds = await dbContext.FavouriteTools
-                .Where(f => f.UserId == userId && f.Tool != null && f.Tool.IsEnabled == true) // Only include enabled tools
+                .Where(f => f.UserId == userId && f.Tool != null && f.Tool.IsEnabled == true)
                 .Select(f => f.ToolId)
                 .ToListAsync();
 
@@ -160,7 +176,7 @@ public class ToolRepository(IDbContextFactory<ApplicationDbContext> contextFacto
                     Slug = t.Slug,
                     Icon = t.Icon,
                     IsEnabled = t.IsEnabled,
-                    IsFavorite = true // All tools in this group are favorites
+                    IsFavorite = true
                 })
                 .ToListAsync();
 
@@ -169,7 +185,7 @@ public class ToolRepository(IDbContextFactory<ApplicationDbContext> contextFacto
                 Id = "favorites",
                 Name = "Favorite Tools",
                 Tools = favoriteTools,
-                IsExpanded = true // Default to expanded
+                IsExpanded = true
             };
         }
         catch (Exception ex)
@@ -187,7 +203,7 @@ public class ToolRepository(IDbContextFactory<ApplicationDbContext> contextFacto
             var tool = await dbContext.Tools.FindAsync(toolId);
             if (tool == null)
             {
-                return false; // Tool not found
+                return false;
             }
 
             tool.IsPremium = isPremium;
@@ -209,7 +225,7 @@ public class ToolRepository(IDbContextFactory<ApplicationDbContext> contextFacto
             var tool = await dbContext.Tools.FindAsync(toolId);
             if (tool == null)
             {
-                return false; // Tool not found
+                return false;
             }
 
             tool.IsEnabled = isEnabled;
@@ -268,12 +284,11 @@ public class ToolRepository(IDbContextFactory<ApplicationDbContext> contextFacto
             var tool = await dbContext.Tools.FindAsync(toolId);
             if (tool == null)
             {
-                return false; // Tool not found
+                return false;
             }
 
             var toolGroupId = tool.GroupId;
 
-            // delete the tool favorite if exists
             var favoriteToolRecords = await dbContext.FavouriteTools
                 .Where(ft => ft.ToolId == toolId)
                 .ToListAsync();
@@ -283,11 +298,9 @@ public class ToolRepository(IDbContextFactory<ApplicationDbContext> contextFacto
                 await dbContext.SaveChangesAsync();
             }
 
-
             dbContext.Tools.Remove(tool);
             await dbContext.SaveChangesAsync();
 
-            // Check if the group has no more tools
             var remainingToolsInGroup = await dbContext.Tools
                 .Where(t => t.GroupId == toolGroupId)
                 .AnyAsync();
@@ -327,7 +340,6 @@ public class ToolRepository(IDbContextFactory<ApplicationDbContext> contextFacto
                 await dbContext.SaveChangesAsync();
             }
 
-            // Check if a tool with the same Slug already exists
             var existingTool = await dbContext.Tools
                 .FirstOrDefaultAsync(t => t.Slug == newTool.Slug);
 
@@ -373,7 +385,7 @@ public class ToolRepository(IDbContextFactory<ApplicationDbContext> contextFacto
             dbContext.Tools.Add(tool);
             await dbContext.SaveChangesAsync();
 
-            newTool.Id = tool.Id; // Update the DTO with the new ID
+            newTool.Id = tool.Id;
             newTool.IsEnabled = tool.IsEnabled;
             newTool.IsPremium = tool.IsPremium;
             newTool.GroupId = tool.GroupId;
@@ -393,7 +405,91 @@ public class ToolRepository(IDbContextFactory<ApplicationDbContext> contextFacto
         }
     }
 
+    public async Task UpdateToolAsync(ToolDto tool)
+    {
+        try
+        {
+            using var dbContext = _contextFactory.CreateDbContext();
+            var existingTool = await dbContext.Tools
+                .Include(t => t.Group)
+                .FirstOrDefaultAsync(t => t.Id == tool.Id);
 
+            if (existingTool == null)
+            {
+                throw new InvalidOperationException($"Tool with ID {tool.Id} not found.");
+            }
+
+            existingTool.Name = tool.Name;
+            existingTool.Description = tool.Description;
+            existingTool.DllPath = tool.DllPath;
+            existingTool.Slug = tool.Slug;
+            existingTool.Icon = tool.Icon;
+            existingTool.IsPremium = tool.IsPremium;
+            existingTool.IsEnabled = tool.IsEnabled;
+
+            if (tool.Group != null)
+            {
+                var toolGroup = await dbContext.ToolGroups
+                    .FirstOrDefaultAsync(tg => tg.Name == tool.Group.Name);
+                if (toolGroup == null)
+                {
+                    toolGroup = new ToolGroup
+                    {
+                        Name = tool.Group?.Name ?? string.Empty,
+                        Description = tool.Group?.Description ?? string.Empty
+                    };
+                    dbContext.ToolGroups.Add(toolGroup);
+                    await dbContext.SaveChangesAsync();
+                }
+                existingTool.GroupId = toolGroup.Id;
+            }
+
+            await dbContext.SaveChangesAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to update tool with ID {ToolId}", tool.Id);
+            throw;
+        }
+    }
+
+    public async Task<ToolDto?> GetToolBySlugAsync(string slug)
+    {
+        try
+        {
+            using var dbContext = _contextFactory.CreateDbContext();
+            var tool = await dbContext.Tools
+                .Include(t => t.Group)
+                .FirstOrDefaultAsync(t => t.Slug == slug);
+
+            if (tool == null)
+            {
+                return null;
+            }
+
+            return new ToolDto
+            {
+                Id = tool.Id,
+                GroupId = tool.GroupId,
+                Name = tool.Name,
+                Description = tool.Description,
+                DllPath = tool.DllPath,
+                Slug = tool.Slug,
+                Icon = tool.Icon,
+                IsPremium = tool.IsPremium,
+                IsEnabled = tool.IsEnabled,
+                Group = new ToolGroupDto
+                {
+                    Id = tool.GroupId,
+                    Name = tool.Group?.Name ?? string.Empty,
+                    Description = tool.Group?.Description ?? string.Empty
+                }
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching tool with slug {Slug}", slug);
+            throw;
+        }
+    }
 }
-
-

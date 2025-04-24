@@ -1,0 +1,346 @@
+﻿@using it_tools.ToolDevelopment.Base
+@using it_tools.ToolDevelopment.Attributes
+@using Microsoft.JSInterop
+@inject IJSRuntime JSRuntime
+@inherits ToolComponentBase
+
+<div class="p-10 bg-gradient-to-br from-gray-100 to-gray-300 min-h-screen flex items-center justify-center">
+    <div class="max-w-2xl w-full">
+        <!-- Header -->
+        <div class="flex items-center justify-between mb-12 animate-fade-in">
+            <div>
+                <h2 class="text-4xl font-extrabold text-gray-900 tracking-tight animate-pulse-short">@Name</h2>
+                <p class="text-gray-600 mt-3 text-lg font-medium">@Description</p>
+            </div>
+            <div class="text-gray-500 text-4xl animate-bounce">@Icon</div>
+        </div>
+
+        <!-- Input Section -->
+        <div class="bg-white p-12 rounded-3xl shadow-2xl mb-10 animate-slide-in">
+            <div class="space-y-10">
+                <!-- Port Range Input -->
+                <div class="relative">
+                    <label class="block text-sm font-semibold text-gray-700 mb-4 tracking-wide">Port Range (1024-65535):</label>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                        <div class="relative">
+                            <input type="number" @bind="_minPort" @bind:after="ValidateInputs" min="1024" max="65535" class="w-full px-6 py-4 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-indigo-400 focus:border-indigo-500 transition-all duration-300 bg-gray-50/80 backdrop-blur-sm shadow-inner text-gray-800 placeholder-gray-400 text-lg" placeholder="Min (e.g., 1024)" />
+                            <span class="absolute inset-y-0 right-0 flex items-center pr-5">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-400 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v8m-4-4h8" />
+                                </svg>
+                            </span>
+                        </div>
+                        <div class="relative">
+                            <input type="number" @bind="_maxPort" @bind:after="ValidateInputs" min="1024" max="65535" class="w-full px-6 py-4 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-indigo-400 focus:border-indigo-500 transition-all duration-300 bg-gray-50/80 backdrop-blur-sm shadow-inner text-gray-800 placeholder-gray-400 text-lg" placeholder="Max (e.g., 65535)" />
+                            <span class="absolute inset-y-0 right-0 flex items-center pr-5">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-400 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v8m-4-4h8" />
+                                </svg>
+                            </span>
+                        </div>
+                    </div>
+                    @if (_hasSubmitted && _errorMessageRange != null)
+                    {
+                        <p class="text-red-500 text-sm mt-3 animate-pulse font-medium">@_errorMessageRange</p>
+                    }
+                </div>
+
+                <!-- Number of Ports Input -->
+                <div class="relative">
+                    <label class="block text-sm font-semibold text-gray-700 mb-4 tracking-wide">Number of Ports to Generate (1-20):</label>
+                    <input type="number" @bind="_portCount" @bind:after="ValidateInputs" min="1" max="20" class="w-full px-6 py-4 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-indigo-400 focus:border-indigo-500 transition-all duration-300 bg-gray-50/80 backdrop-blur-sm shadow-inner text-gray-800 placeholder-gray-400 text-lg" placeholder="e.g., 5" />
+                    <span class="absolute inset-y-0 right-0 flex items-center pr-5 mt-12">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-400 animate-bounce" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M12 5l7 7-7 7" />
+                        </svg>
+                    </span>
+                    @if (_hasSubmitted && _errorMessageCount != null)
+                    {
+                        <p class="text-red-500 text-sm mt-3 animate-pulse font-medium">@_errorMessageCount</p>
+                    }
+                </div>
+
+                <!-- Generate Button -->
+                <div class="text-center">
+                    <button @onclick="GeneratePorts" disabled="@_isGenerating" class="relative px-10 py-5 bg-gradient-to-r from-indigo-600 to-blue-600 text-white font-semibold rounded-xl hover:from-indigo-700 hover:to-blue-700 transition-all duration-500 shadow-xl hover:shadow-2xl transform hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto overflow-hidden group">
+                        @if (_isGenerating)
+                        {
+                            <span class="flex items-center justify-center relative z-10">
+                                <svg class="animate-spin h-6 w-6 mr-3 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                Generating Ports...
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="relative z-10">Generate Ports</span>
+                        }
+                        <span class="absolute inset-0 bg-gradient-to-r from-blue-600 to-indigo-600 opacity-0 group-hover:opacity-30 transition-opacity duration-500"></span>
+                        <span class="absolute top-0 left-0 w-0 h-full bg-white/20 transition-all duration-500 group-hover:w-full"></span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Generated Ports Section -->
+        @if (_generatedPorts.Any())
+        {
+            <div class="bg-white p-12 rounded-3xl shadow-2xl animate-slide-up">
+                <div class="flex items-center justify-between mb-8">
+                    <h3 class="text-2xl font-bold text-gray-800 tracking-tight animate-pulse-short">Generated Ports (@_generatedPorts.Count)</h3>
+                    <button @onclick="CopyPorts" disabled="@_isCopying" class="flex items-center px-6 py-3 bg-gradient-to-r from-green-600 to-green-500 text-white font-semibold rounded-lg hover:from-green-700 hover:to-green-600 transition-all duration-300 shadow-md transform hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2 animate-bounce" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                        </svg>
+                        @if (_isCopying)
+                        {
+                            <span>Copying...</span>
+                        }
+                        else
+                        {
+                            <span>Copy Ports</span>
+                        }
+                    </button>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    @foreach (var port in _generatedPorts)
+                    {
+                        <div class="p-5 bg-blue-50 rounded-xl text-center text-gray-800 font-medium transform transition-all duration-300 hover:scale-105 hover:bg-blue-100 animate-pop-in flex items-center justify-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-3 text-blue-500 animate-spin-slow" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M12 5l7 7-7 7" />
+                            </svg>
+                            <span class="text-lg">@port</span>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+<!-- Toast Notification -->
+@if (_showToast)
+{
+    <div class="fixed bottom-10 right-10 z-50 animate-toast-in">
+        <div class="flex items-center bg-@(_toastSuccess ? "green" : "red")-600 text-white px-6 py-4 rounded-xl shadow-2xl backdrop-blur-sm">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 mr-3 animate-bounce" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="@(_toastSuccess ? "M5 13l4 4L19 7" : "M6 18L18 6M6 6l12 12")" />
+            </svg>
+            <span class="font-medium text-lg">@_toastMessage</span>
+        </div>
+    </div>
+}
+
+<style>
+    @@keyframes fadeIn {
+        0% { opacity: 0; transform: translateY(30px); }
+        100% { opacity: 1; transform: translateY(0); }
+    }
+
+    @@keyframes slideIn {
+        0% { opacity: 0; transform: translateY(-40px); }
+        100% { opacity: 1; transform: translateY(0); }
+    }
+
+    @@keyframes slideUp {
+        0% { opacity: 0; transform: translateY(50px); }
+        100% { opacity: 1; transform: translateY(0); }
+    }
+
+    @@keyframes popIn {
+        0% { transform: scale(0.7); opacity: 0; }
+        80% { transform: scale(1.15); opacity: 1; }
+        100% { transform: scale(1); opacity: 1; }
+    }
+
+    @@keyframes toastIn {
+        0% { opacity: 0; transform: translateX(40px); }
+        100% { opacity: 1; transform: translateX(0); }
+    }
+
+    @@keyframes toastOut {
+        0% { opacity: 1; transform: translateX(0); }
+        100% { opacity: 0; transform: translateX(40px); }
+    }
+
+    @@keyframes pulseShort {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+    }
+
+    @@keyframes spinSlow {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    .animate-fade-in {
+        animation: fadeIn 0.8s ease-in-out;
+    }
+
+    .animate-slide-in {
+        animation: slideIn 0.7s ease-in-out;
+    }
+
+    .animate-slide-up {
+        animation: slideUp 0.9s ease-in-out;
+    }
+
+    .animate-pop-in {
+        animation: popIn 0.5s ease-out forwards;
+    }
+
+    .animate-toast-in {
+        animation: toastIn 0.5s ease-in-out;
+    }
+
+    .animate-toast-out {
+        animation: toastOut 0.5s ease-in-out forwards;
+    }
+
+    .animate-pulse-short {
+        animation: pulseShort 2s ease-in-out infinite;
+    }
+
+    .animate-spin-slow {
+        animation: spinSlow 4s linear infinite;
+    }
+</style>
+
+@code {
+    private int _minPort { get; set; } = 1024;
+    private int _maxPort { get; set; } = 65535;
+    private int _portCount { get; set; } = 1;
+    private List<int> _generatedPorts { get; set; } = new();
+    private bool _hasSubmitted { get; set; }
+    private bool _isGenerating { get; set; }
+    private bool _isCopying { get; set; }
+    private bool _showToast { get; set; }
+    private bool _toastSuccess { get; set; }
+    private string _toastMessage { get; set; } = "";
+    private string? _errorMessageRange { get; set; }
+    private string? _errorMessageCount { get; set; }
+
+    public override string Name => "Random Port Generator";
+    public override string Description => "Generate unique random port numbers within a specified range for development and testing purposes.";
+    public override string Slug => "random-port-generator";
+    public override string Group => "Software Development Tools";
+    public override string Icon => "🔌";
+
+    private async Task ValidateInputs()
+    {
+        _errorMessageRange = null;
+        _errorMessageCount = null;
+
+        if (_minPort < 1024 || _maxPort > 65535 || _minPort > _maxPort)
+        {
+            _errorMessageRange = "Ports must be between 1024 and 65535, and Min must be less than or equal to Max.";
+        }
+
+        if (_portCount < 1 || _portCount > 20)
+        {
+            _errorMessageCount = "Number of ports must be between 1 and 20.";
+        }
+
+        if (_portCount > (_maxPort - _minPort + 1))
+        {
+            _errorMessageCount = $"Cannot generate {_portCount} unique ports in range [{_minPort}, {_maxPort}].";
+        }
+
+        await Task.CompletedTask;
+    }
+
+    private async Task GeneratePorts()
+    {
+        _hasSubmitted = true;
+        _generatedPorts.Clear();
+        _errorMessageRange = null;
+        _errorMessageCount = null;
+
+        if (_minPort < 1024 || _maxPort > 65535 || _minPort > _maxPort)
+        {
+            _errorMessageRange = "Ports must be between 1024 and 65535, and Min must be less than or equal to Max.";
+            await ShowToast(false, _errorMessageRange);
+            return;
+        }
+
+        if (_portCount < 1 || _portCount > 20)
+        {
+            _errorMessageCount = "Number of ports must be between 1 and 20.";
+            await ShowToast(false, _errorMessageCount);
+            return;
+        }
+
+        if (_portCount > (_maxPort - _minPort + 1))
+        {
+            _errorMessageCount = $"Cannot generate {_portCount} unique ports in range [{_minPort}, {_maxPort}].";
+            await ShowToast(false, _errorMessageCount);
+            return;
+        }
+
+        _isGenerating = true;
+        try
+        {
+            await Task.Delay(600); // Simulate processing for UX
+            Random random = new Random();
+            HashSet<int> ports = new();
+
+            while (ports.Count < _portCount)
+            {
+                int port = random.Next(_minPort, _maxPort + 1);
+                ports.Add(port);
+            }
+
+            _generatedPorts = ports.OrderBy(p => p).ToList();
+            await ShowToast(true, $"Successfully generated {_portCount} unique ports!");
+        }
+        catch (Exception ex)
+        {
+            _errorMessageCount = $"Error generating ports: {ex.Message}";
+            await ShowToast(false, _errorMessageCount);
+        }
+        finally
+        {
+            _isGenerating = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task CopyPorts()
+    {
+        if (!_generatedPorts.Any())
+        {
+            await ShowToast(false, "No ports to copy.");
+            return;
+        }
+
+        _isCopying = true;
+        try
+        {
+            string portsText = $"Generated Ports:\n{string.Join(", ", _generatedPorts)}";
+            await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", portsText);
+            await ShowToast(true, "Ports copied to clipboard!");
+        }
+        catch (Exception ex)
+        {
+            await ShowToast(false, $"Error copying ports: {ex.Message}");
+        }
+        finally
+        {
+            _isCopying = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task ShowToast(bool success, string message)
+    {
+        _toastSuccess = success;
+        _toastMessage = message;
+        _showToast = true;
+        StateHasChanged();
+        await Task.Delay(4000);
+        _showToast = false;
+        StateHasChanged();
+    }
+}

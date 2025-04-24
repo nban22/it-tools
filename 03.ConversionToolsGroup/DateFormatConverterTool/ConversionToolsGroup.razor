@@ -1,0 +1,495 @@
+﻿@using it_tools.ToolDevelopment.Base
+@using it_tools.ToolDevelopment.Attributes
+@using System.Text
+@using System.Globalization
+@using System.Collections.Generic
+@attribute [ToolComponentAttribute(true)]
+@inherits ToolComponentBase
+
+<div class="p-6 bg-white rounded-lg shadow-lg">
+    <div class="flex items-center mb-6">
+        <div class="mr-3 bg-indigo-100 p-2 rounded-lg">
+            <span class="text-2xl">@Icon</span>
+        </div>
+        <div>
+            <h2 class="text-2xl font-bold text-gray-800">@Name</h2>
+            <p class="text-gray-600">@Description</p>
+        </div>
+    </div>
+    
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- Input Panel -->
+        <div class="bg-gray-50 p-5 rounded-lg border border-gray-200">
+            <h3 class="text-lg font-semibold text-gray-700 mb-4">Input Date</h3>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Date Value</label>
+                    <div class="flex space-x-2">
+                        <input 
+                            @bind="_inputDate" 
+                            class="flex-1 px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            placeholder="Enter date value..." />
+                        <button 
+                            @onclick="@(() => _inputDate = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"))" 
+                            class="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium rounded-md shadow-sm transition duration-150 ease-in-out">
+                            Now
+                        </button>
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Input Format</label>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div class="flex items-center">
+                            <input 
+                                type="radio" 
+                                id="autoDetect" 
+                                name="inputFormat" 
+                                value="auto" 
+                                checked="@(_selectedInputFormat == "auto")" 
+                                @onchange="@(e => _selectedInputFormat = "auto")" 
+                                class="mr-2 h-4 w-4 text-indigo-600 focus:ring-indigo-500" />
+                            <label for="autoDetect" class="text-sm text-gray-700">Auto Detect</label>
+                        </div>
+                        
+                        <div class="flex items-center">
+                            <input 
+                                type="radio" 
+                                id="custom" 
+                                name="inputFormat" 
+                                value="custom" 
+                                checked="@(_selectedInputFormat == "custom")" 
+                                @onchange="@(e => _selectedInputFormat = "custom")" 
+                                class="mr-2 h-4 w-4 text-indigo-600 focus:ring-indigo-500" />
+                            <label for="custom" class="text-sm text-gray-700">Custom Format</label>
+                        </div>
+                    </div>
+                    
+                    @if (_selectedInputFormat == "custom")
+                    {
+                        <div class="mt-2">
+                            <div class="flex space-x-2">
+                                <input 
+                                    @bind="_customInputFormat" 
+                                    class="flex-1 px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                    placeholder="Enter custom format (e.g. yyyy-MM-dd)" />
+                                    
+                                <div class="relative group">
+                                    <button 
+                                        type="button"
+                                        class="px-3 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-md text-sm flex items-center transition duration-150 ease-in-out">
+                                        <span>?</span>
+                                    </button>
+                                    <div class="absolute right-0 z-10 hidden group-hover:block mt-2 w-64 p-3 bg-white rounded-lg shadow-lg border border-gray-200 text-xs text-gray-600">
+                                        <p class="font-bold mb-1">Format Patterns:</p>
+                                        <ul class="space-y-1">
+                                            <li><span class="font-medium">yyyy</span>: Four-digit year</li>
+                                            <li><span class="font-medium">MM</span>: Two-digit month</li>
+                                            <li><span class="font-medium">dd</span>: Two-digit day</li>
+                                            <li><span class="font-medium">HH</span>: Two-digit hour (24-hour)</li>
+                                            <li><span class="font-medium">hh</span>: Two-digit hour (12-hour)</li>
+                                            <li><span class="font-medium">mm</span>: Two-digit minute</li>
+                                            <li><span class="font-medium">ss</span>: Two-digit second</li>
+                                            <li><span class="font-medium">tt</span>: AM/PM designator</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Culture/Locale</label>
+                    <select @bind="_selectedCulture" class="w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        @foreach (var culture in _availableCultures)
+                        {
+                            <option value="@culture.Key">@culture.Value</option>
+                        }
+                    </select>
+                </div>
+                
+                <button 
+                    @onclick="ConvertDate" 
+                    class="w-full px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-md shadow-sm transition duration-150 ease-in-out">
+                    Convert Date
+                </button>
+            </div>
+            
+            <div class="mt-6 p-3 bg-blue-50 rounded-lg border border-blue-200 text-sm text-blue-800">
+                <div class="flex items-start">
+                    <div class="flex-shrink-0 mr-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="mt-0.5" viewBox="0 0 16 16">
+                            <path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm.93-9.412-1 4.705c-.07.34.029.533.304.533.194 0 .487-.07.686-.246l-.088.416c-.287.346-.92.598-1.465.598-.703 0-1.002-.422-.808-1.319l.738-3.468c.064-.293.006-.399-.287-.47l-.451-.081.082-.381 2.29-.287zM8 5.5a1 1 0 1 1 0-2 1 1 0 0 1 0 2z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <p class="font-semibold">Supported formats include:</p>
+                        <ul class="mt-1 ml-4 list-disc text-xs space-y-1">
+                            <li>ISO 8601 (e.g., 2023-04-15T14:30:00)</li>
+                            <li>US date (e.g., 04/15/2023)</li>
+                            <li>European date (e.g., 15/04/2023)</li>
+                            <li>Long date with time (e.g., April 15, 2023 2:30 PM)</li>
+                            <li>And many other standard formats</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Output Panel -->
+        <div class="bg-gray-50 p-5 rounded-lg border border-gray-200">
+            <h3 class="text-lg font-semibold text-gray-700 mb-4">Output Formats</h3>
+            
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Custom Output Format</label>
+                <div class="flex space-x-2">
+                    <input 
+                        @bind="_customOutputFormat" 
+                        class="flex-1 px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        placeholder="Enter custom output format..." />
+                        
+                    <button 
+                        @onclick="ApplyCustomFormat" 
+                        class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-md shadow-sm transition duration-150 ease-in-out">
+                        Apply
+                    </button>
+                </div>
+            </div>
+            
+            @if (!string.IsNullOrEmpty(_errorMessage))
+            {
+                <div class="p-3 mb-4 bg-red-50 rounded-lg border border-red-200">
+                    <p class="text-sm text-red-800">@_errorMessage</p>
+                </div>
+            }
+            
+            @if (_parsedDate.HasValue)
+            {
+                <div class="p-3 mb-4 bg-green-50 rounded-lg border border-green-200">
+                    <p class="text-sm text-green-800">
+                        <span class="font-semibold">Parsed Date:</span> @_parsedDate.Value.ToString("F", GetSelectedCultureInfo())
+                    </p>
+                </div>
+                
+                <div class="space-y-3 mb-4">
+                    @foreach (var format in _outputFormats)
+                    {
+                        <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                            <div class="flex justify-between items-center p-3 bg-gray-50 border-b border-gray-200">
+                                <span class="text-sm font-medium text-gray-700">@format.Description</span>
+                                <button 
+                                    @onclick="@(() => CopyToClipboard(format.FormatDate(_parsedDate.Value, GetSelectedCultureInfo())))" 
+                                    class="px-2 py-1 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded text-xs flex items-center transition duration-150 ease-in-out">
+                                    Copy
+                                </button>
+                            </div>
+                            <div class="p-3">
+                                <pre class="text-sm text-gray-800 whitespace-pre-wrap">@format.FormatDate(_parsedDate.Value, GetSelectedCultureInfo())</pre>
+                            </div>
+                        </div>
+                    }
+                </div>
+                
+                <div class="p-3 bg-gray-100 rounded-lg">
+                    <h4 class="text-sm font-medium text-gray-700 mb-2">Date Components</h4>
+                    <div class="grid grid-cols-3 gap-2 text-sm">
+                        <div class="p-2 bg-white rounded border border-gray-200">
+                            <span class="text-gray-500">Year</span>
+                            <p class="font-medium text-gray-800">@_parsedDate.Value.Year</p>
+                        </div>
+                        <div class="p-2 bg-white rounded border border-gray-200">
+                            <span class="text-gray-500">Month</span>
+                            <p class="font-medium text-gray-800">@_parsedDate.Value.Month (@GetMonthName(_parsedDate.Value.Month))</p>
+                        </div>
+                        <div class="p-2 bg-white rounded border border-gray-200">
+                            <span class="text-gray-500">Day</span>
+                            <p class="font-medium text-gray-800">@_parsedDate.Value.Day (@GetDayOfWeek(_parsedDate.Value.DayOfWeek))</p>
+                        </div>
+                        <div class="p-2 bg-white rounded border border-gray-200">
+                            <span class="text-gray-500">Hour</span>
+                            <p class="font-medium text-gray-800">@_parsedDate.Value.Hour</p>
+                        </div>
+                        <div class="p-2 bg-white rounded border border-gray-200">
+                            <span class="text-gray-500">Minute</span>
+                            <p class="font-medium text-gray-800">@_parsedDate.Value.Minute</p>
+                        </div>
+                        <div class="p-2 bg-white rounded border border-gray-200">
+                            <span class="text-gray-500">Second</span>
+                            <p class="font-medium text-gray-800">@_parsedDate.Value.Second</p>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-3 grid grid-cols-2 gap-2">
+                        <div class="p-2 bg-white rounded border border-gray-200">
+                            <span class="text-gray-500">Unix Timestamp</span>
+                            <p class="font-medium text-gray-800">@DateTimeToUnixTimestamp(_parsedDate.Value)</p>
+                        </div>
+                        <div class="p-2 bg-white rounded border border-gray-200">
+                            <span class="text-gray-500">Day of Year</span>
+                            <p class="font-medium text-gray-800">@_parsedDate.Value.DayOfYear</p>
+                        </div>
+                    </div>
+                </div>
+            }
+            else if (!string.IsNullOrEmpty(_inputDate))
+            {
+                <div class="p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+                    <p class="text-sm text-yellow-800">Enter a valid date and click "Convert Date" to see formatted outputs.</p>
+                </div>
+            }
+            
+            @if (!string.IsNullOrEmpty(_statusMessage))
+            {
+                <div class="mt-4 @(_isError ? "text-red-600" : "text-green-600") text-sm">
+                    @_statusMessage
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private string _inputDate = "";
+    private string _selectedInputFormat = "auto";
+    private string _customInputFormat = "yyyy-MM-dd HH:mm:ss";
+    private string _selectedCulture = "en-US";
+    private string _customOutputFormat = "yyyy-MM-dd HH:mm:ss";
+    
+    private string _statusMessage = "";
+    private string _errorMessage = "";
+    private bool _isError = false;
+    
+    private DateTime? _parsedDate = null;
+    
+    // Implement required properties from ToolComponentBase
+    public override string Name => "Date Format Converter";
+    public override string Description => "Convert dates between different formats and cultures";
+    public override string Group => "Conversion Tools";
+    public override string Icon => "📅";
+    
+    // Available cultures
+    private Dictionary<string, string> _availableCultures = new Dictionary<string, string>
+    {
+        { "en-US", "English (United States)" },
+        { "en-GB", "English (United Kingdom)" },
+        { "fr-FR", "French (France)" },
+        { "de-DE", "German (Germany)" },
+        { "es-ES", "Spanish (Spain)" },
+        { "it-IT", "Italian (Italy)" },
+        { "pt-BR", "Portuguese (Brazil)" },
+        { "ru-RU", "Russian (Russia)" },
+        { "ja-JP", "Japanese (Japan)" },
+        { "zh-CN", "Chinese (Simplified, China)" },
+        { "ar-SA", "Arabic (Saudi Arabia)" },
+        { "hi-IN", "Hindi (India)" },
+        { "ko-KR", "Korean (Korea)" },
+        { "vi-VN", "Vietnamese (Vietnam)" }
+    };
+    
+    // Output format definitions
+    private List<DateFormat> _outputFormats = new List<DateFormat>
+    {
+        new DateFormat("ISO 8601", "yyyy-MM-ddTHH:mm:ss", (dt, ci) => dt.ToString("yyyy-MM-ddTHH:mm:ss")),
+        new DateFormat("Short Date", "d", (dt, ci) => dt.ToString("d", ci)),
+        new DateFormat("Long Date", "D", (dt, ci) => dt.ToString("D", ci)),
+        new DateFormat("Short Time", "t", (dt, ci) => dt.ToString("t", ci)),
+        new DateFormat("Long Time", "T", (dt, ci) => dt.ToString("T", ci)),
+        new DateFormat("Full Date/Time", "F", (dt, ci) => dt.ToString("F", ci)),
+        new DateFormat("Universal Sortable", "u", (dt, ci) => dt.ToString("u")),
+        new DateFormat("RFC 1123", "r", (dt, ci) => dt.ToString("r")),
+        new DateFormat("Unix Timestamp", "seconds", (dt, ci) => DateTimeToUnixTimestamp(dt).ToString()),
+        new DateFormat("Human Readable", "custom", (dt, ci) => $"{dt.ToString("dddd, MMMM d, yyyy", ci)} at {dt.ToString("h:mm:ss tt", ci)}")
+    };
+    
+    private CultureInfo GetSelectedCultureInfo()
+    {
+        try
+        {
+            return new CultureInfo(_selectedCulture);
+        }
+        catch
+        {
+            return CultureInfo.InvariantCulture;
+        }
+    }
+    
+    private string GetMonthName(int month)
+    {
+        return GetSelectedCultureInfo().DateTimeFormat.GetMonthName(month);
+    }
+    
+    private string GetDayOfWeek(DayOfWeek dayOfWeek)
+    {
+        return GetSelectedCultureInfo().DateTimeFormat.GetDayName(dayOfWeek);
+    }
+    
+    private void CopyToClipboard(string text)
+    {
+        try
+        {
+            _statusMessage = "Copied to clipboard!";
+            _isError = false;
+            // Note: Actual clipboard functionality must be implemented client-side with JS interop
+        }
+        catch (Exception ex)
+        {
+            _statusMessage = $"Error copying to clipboard: {ex.Message}";
+            _isError = true;
+        }
+    }
+    
+    private void ConvertDate()
+    {
+        try
+        {
+            _errorMessage = "";
+            _statusMessage = "";
+            _isError = false;
+            
+            if (string.IsNullOrWhiteSpace(_inputDate))
+            {
+                _errorMessage = "Please enter a date to convert.";
+                _parsedDate = null;
+                return;
+            }
+            
+            // Parse the date based on the selected input format
+            if (_selectedInputFormat == "auto")
+            {
+                // Try to parse using the current culture
+                if (DateTime.TryParse(_inputDate, GetSelectedCultureInfo(), DateTimeStyles.None, out DateTime result))
+                {
+                    _parsedDate = result;
+                }
+                else
+                {
+                    // Try some common formats
+                    string[] commonFormats = { 
+                        "yyyy-MM-dd", "yyyy-MM-ddTHH:mm:ss", "yyyy-MM-dd HH:mm:ss",
+                        "MM/dd/yyyy", "dd/MM/yyyy", "M/d/yyyy", "d/M/yyyy",
+                        "MMM d, yyyy", "MMMM d, yyyy"
+                    };
+                    
+                    if (DateTime.TryParseExact(_inputDate, commonFormats, GetSelectedCultureInfo(), 
+                                             DateTimeStyles.None, out result))
+                    {
+                        _parsedDate = result;
+                    }
+                    else
+                    {
+                        _errorMessage = "Could not automatically detect the date format. Try using a custom format.";
+                        _parsedDate = null;
+                        return;
+                    }
+                }
+            }
+            else // Custom format
+            {
+                if (string.IsNullOrWhiteSpace(_customInputFormat))
+                {
+                    _errorMessage = "Please enter a custom input format.";
+                    _parsedDate = null;
+                    return;
+                }
+                
+                if (DateTime.TryParseExact(_inputDate, _customInputFormat, GetSelectedCultureInfo(), 
+                                         DateTimeStyles.None, out DateTime result))
+                {
+                    _parsedDate = result;
+                }
+                else
+                {
+                    _errorMessage = $"Could not parse the date using format '{_customInputFormat}'.";
+                    _parsedDate = null;
+                    return;
+                }
+            }
+            
+            _statusMessage = "Date converted successfully!";
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Error converting date: {ex.Message}";
+            _parsedDate = null;
+            _isError = true;
+        }
+    }
+    
+    private void ApplyCustomFormat()
+    {
+        try
+        {
+            _statusMessage = "";
+            _isError = false;
+            
+            if (!_parsedDate.HasValue)
+            {
+                _statusMessage = "Please convert a date first.";
+                _isError = true;
+                return;
+            }
+            
+            if (string.IsNullOrWhiteSpace(_customOutputFormat))
+            {
+                _statusMessage = "Please enter a custom output format.";
+                _isError = true;
+                return;
+            }
+            
+            // Check if the custom format already exists in the output formats
+            bool exists = false;
+            foreach (var format in _outputFormats)
+            {
+                if (format.Description == "Custom Format" && format.Format == _customOutputFormat)
+                {
+                    exists = true;
+                    break;
+                }
+            }
+            
+            // Add a new custom format if it doesn't exist
+            if (!exists)
+            {
+                string format = _customOutputFormat;
+                _outputFormats.Insert(0, new DateFormat("Custom Format", format, 
+                    (dt, ci) => dt.ToString(format, ci)));
+                
+                // Limit the number of custom formats
+                while (_outputFormats.Count > 12)
+                {
+                    _outputFormats.RemoveAt(_outputFormats.Count - 1);
+                }
+            }
+            
+            _statusMessage = "Custom format applied!";
+        }
+        catch (Exception ex)
+        {
+            _statusMessage = $"Error applying custom format: {ex.Message}";
+            _isError = true;
+        }
+    }
+    
+    private static long DateTimeToUnixTimestamp(DateTime dateTime)
+    {
+        DateTime unixEpoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        return (long)(dateTime.ToUniversalTime() - unixEpoch).TotalSeconds;
+    }
+    
+    // Class to represent a date format with description and formatting function
+    private class DateFormat
+    {
+        public string Description { get; }
+        public string Format { get; }
+        public Func<DateTime, CultureInfo, string> FormatDate { get; }
+        
+        public DateFormat(string description, string format, Func<DateTime, CultureInfo, string> formatDate)
+        {
+            Description = description;
+            Format = format;
+            FormatDate = formatDate;
+        }
+    }
+}

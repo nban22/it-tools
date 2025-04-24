@@ -5,8 +5,8 @@
 @inject it_tools.Data.Services.IToolService ToolService
 @using it_tools.Data.Models
 
-<div class="min-h-screen bg-gray-50 p-6">
-    <h3 class="text-3xl font-bold text-gray-800 mb-10 tracking-tight">Dashboard</h3>
+<div class="min-h-screen p-6">
+    <h3 class="text-3xl font-bold text-gray-800 mb-10 tracking-tight animate-fade-in">Dashboard</h3>
 
     @if (isLoading)
     {
@@ -17,7 +17,7 @@
     else
     {
         <!-- Card số liệu -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-10">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-10 animate-fade-in">
             <!-- Total Tools -->
             <div class="bg-gradient-to-br from-blue-500 to-blue-700 p-6 rounded-2xl shadow-xl transform hover:scale-105 transition-all duration-300">
                 <div class="flex items-center space-x-4">
@@ -63,7 +63,7 @@
         </div>
 
         <!-- Recent Tools -->
-        <div class="bg-white p-8 rounded-2xl shadow-xl">
+        <div class="bg-white p-8 rounded-2xl shadow-xl animate-fade-in">
             <h4 class="text-xl font-semibold text-gray-800 mb-6">Recent Tools</h4>
             @if (recentTools?.Any() == true)
             {
@@ -99,6 +99,17 @@
         </div>
     }
 </div>
+
+<style>
+    @@keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+
+    .animate-fade-in {
+        animation: fadeIn 0.5s ease-in-out;
+    }
+</style>
 
 @code {
     private bool isLoading = true;

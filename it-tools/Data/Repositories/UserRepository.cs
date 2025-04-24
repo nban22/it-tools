@@ -58,7 +58,6 @@ public class UserRepository(IDbContextFactory<ApplicationDbContext> contextFacto
         try
         {
             using var context = _contextFactory.CreateDbContext();
-            _logger.LogInformation("Retrieving favorite tools for user {UserId}", userId);
             var favoriteTools = await context.FavouriteTools
                 .Where(f => f.UserId == userId)
                 .Include(f => f.Tool)

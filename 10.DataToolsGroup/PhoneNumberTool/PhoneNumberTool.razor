@@ -1,0 +1,259 @@
+﻿@using it_tools.ToolDevelopment.Base
+@using it_tools.ToolDevelopment.Attributes
+@using Microsoft.JSInterop
+@inject IJSRuntime JSRuntime
+@inherits ToolComponentBase
+
+<div class="p-6 bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen">
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-8 animate-fade-in">
+        <div>
+            <h2 class="text-3xl font-extrabold text-gray-900 tracking-tight">@Name</h2>
+            <p class="text-gray-600 mt-1">@Description</p>
+        </div>
+    </div>
+
+    <!-- Form -->
+    <div class="bg-white p-6 rounded-2xl shadow-xl mb-6 animate-slide-in">
+        <div class="flex items-end space-x-4">
+            <div class="flex-1">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Phone Number:</label>
+                <input type="text" @bind="_phoneNumber" placeholder="+1234567890" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 h-12" />
+            </div>
+            <button @onclick="AnalyzeAndFormatPhoneNumber" disabled="@_isProcessing" class="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 h-12">
+                @if (_isProcessing)
+                {
+                    <span>Processing...</span>
+                }
+                else
+                {
+                    <span>Analyze & Format</span>
+                }
+            </button>
+        </div>
+    </div>
+
+    <!-- Results -->
+    @if (_result != null)
+    {
+        <div class="bg-white p-6 rounded-2xl shadow-xl animate-slide-in">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-xl font-semibold text-gray-800">Analysis Result</h3>
+                <button @onclick="CopyToClipboard" disabled="@_isCopying" class="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all duration-200 shadow-md">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                    @if (_isCopying)
+                    {
+                        <span>Copying...</span>
+                    }
+                    else
+                    {
+                        <span>Copy as JSON</span>
+                    }
+                </button>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <p><strong>Formatted Number:</strong> @_result.FormattedNumber</p>
+                    <p><strong>Country Code:</strong> @_result.CountryCode</p>
+                </div>
+                <div>
+                    <p><strong>Type:</strong> @_result.PhoneType</p>
+                    <p><strong>Is Valid:</strong> @(_result.IsValid ? "Yes" : "No")</p>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+<!-- Toast Notification -->
+@if (_showToast)
+{
+    <div class="fixed bottom-6 right-6 z-50 animate-toast-in">
+        <div class="flex items-center bg-@(_toastSuccess ? "green" : "red")-500 text-white px-4 py-3 rounded-lg shadow-lg">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="@(_toastSuccess ? "M5 13l4 4L19 7" : "M6 18L18 6M6 6l12 12")" />
+            </svg>
+            <span>@_toastMessage</span>
+        </div>
+    </div>
+}
+
+<style>
+    /* Custom Animations */
+    @@keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+
+    @@keyframes slideIn {
+        from { transform: translateY(-20px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+    }
+
+    @@keyframes toastIn {
+        from { transform: translateY(20px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+    }
+
+    @@keyframes toastOut {
+        from { transform: translateY(0); opacity: 1; }
+        to { transform: translateY(20px); opacity: 0; }
+    }
+
+    .animate-fade-in {
+        animation: fadeIn 0.5s ease-in-out;
+    }
+
+    .animate-slide-in {
+        animation: slideIn 0.5s ease-in-out;
+    }
+
+    .animate-toast-in {
+        animation: toastIn 0.3s ease-in-out;
+    }
+
+    .animate-toast-out {
+        animation: toastOut 0.3s ease-in-out forwards;
+    }
+</style>
+
+@code {
+    private string _phoneNumber = "";
+    private PhoneAnalysisResult? _result;
+    private bool _isProcessing = false;
+    private bool _isCopying = false;
+    private bool _showToast = false;
+    private bool _toastSuccess = false;
+    private string _toastMessage = "";
+
+    // Metadata cho công cụ
+    public override string Name => "Phone Number Analyzer and Formatter";
+    public override string Description => "Analyze and format phone numbers with country code detection.";
+    public override string Group => "Data Tools";
+    public override string Icon => "📞";
+
+    private record PhoneAnalysisResult(string FormattedNumber, string CountryCode, string PhoneType, bool IsValid);
+
+    private async Task AnalyzeAndFormatPhoneNumber()
+    {
+        if (string.IsNullOrWhiteSpace(_phoneNumber))
+        {
+            ShowToast(false, "Please enter a phone number.");
+            return;
+        }
+
+        _isProcessing = true;
+        try
+        {
+            // Simulate processing delay
+            await Task.Delay(500);
+
+            // Basic phone number analysis logic
+            var cleanedNumber = new string(_phoneNumber.Where(char.IsDigit).ToArray());
+            string countryCode = "";
+            string formattedNumber = _phoneNumber.Trim();
+            string phoneType = "Unknown";
+            bool isValid = false;
+
+            // Simple country code detection
+            if (formattedNumber.StartsWith("+"))
+            {
+                if (formattedNumber.StartsWith("+1"))
+                {
+                    countryCode = "+1 (USA/Canada)";
+                    cleanedNumber = cleanedNumber[1..];
+                }
+                else if (formattedNumber.StartsWith("+84"))
+                {
+                    countryCode = "+84 (Vietnam)";
+                    cleanedNumber = cleanedNumber[2..];
+                }
+                else if (formattedNumber.StartsWith("+44"))
+                {
+                    countryCode = "+44 (UK)";
+                    cleanedNumber = cleanedNumber[2..];
+                }
+                else
+                {
+                    countryCode = formattedNumber[..3] + " (Unknown)";
+                    cleanedNumber = cleanedNumber[3..];
+                }
+            }
+            else
+            {
+                countryCode = "Unknown (No country code)";
+            }
+
+            // Basic validation and formatting
+            if (cleanedNumber.Length >= 9 && cleanedNumber.Length <= 12)
+            {
+                isValid = true;
+                // Format number: (XXX) XXX-XXXX
+                if (cleanedNumber.Length == 10)
+                {
+                    formattedNumber = $"({cleanedNumber[..3]}) {cleanedNumber[3..6]}-{cleanedNumber[6..]}";
+                }
+                else
+                {
+                    formattedNumber = cleanedNumber;
+                }
+
+                // Guess phone type (very basic)
+                if (cleanedNumber.StartsWith("9") || cleanedNumber.StartsWith("8"))
+                {
+                    phoneType = "Mobile";
+                }
+                else
+                {
+                    phoneType = "Landline";
+                }
+            }
+
+            _result = new PhoneAnalysisResult(formattedNumber, countryCode, phoneType, isValid);
+            if (!_result.IsValid)
+            {
+                ShowToast(false, "Invalid phone number format.");
+            }
+        }
+        catch (Exception ex)
+        {
+            ShowToast(false, $"Error: {ex.Message}");
+        }
+        finally
+        {
+            _isProcessing = false;
+        }
+    }
+
+    private async Task CopyToClipboard()
+    {
+        if (_result == null) return;
+
+        _isCopying = true;
+        try
+        {
+            var json = System.Text.Json.JsonSerializer.Serialize(_result, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+            await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", json);
+            ShowToast(true, "Result copied to clipboard as JSON!");
+        }
+        catch (Exception ex)
+        {
+            ShowToast(false, $"Failed to copy: {ex.Message}");
+        }
+        finally
+        {
+            _isCopying = false;
+        }
+    }
+
+    private async void ShowToast(bool success, string message)
+    {
+        _toastSuccess = success;
+        _toastMessage = message;
+        _showToast = true;
+        await Task.Delay(3000);
+        _showToast = false;
+    }
+}

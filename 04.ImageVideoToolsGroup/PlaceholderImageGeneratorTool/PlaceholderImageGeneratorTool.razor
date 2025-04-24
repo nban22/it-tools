@@ -1,0 +1,224 @@
+﻿@using it_tools.ToolDevelopment.Base
+@using it_tools.ToolDevelopment.Attributes
+@using System.Text
+@using System.Web
+@using Microsoft.JSInterop
+@attribute [ToolComponentAttribute(true)]
+@inherits ToolComponentBase
+@inject IJSRuntime JSRuntime
+
+<div class="p-6 bg-white rounded-lg shadow-lg">
+    <div class="flex items-center mb-6">
+        <span class="text-3xl mr-3">📷</span>
+        <div>
+            <h2 class="text-2xl font-bold text-gray-800">@Name</h2>
+            <p class="text-gray-600">@Description</p>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Width (px):</label>
+                <input type="number" @bind="_width" min="50" max="2000" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500" />
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Height (px):</label>
+                <input type="number" @bind="_height" min="50" max="2000" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500" />
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Background Color:</label>
+                <div class="flex space-x-2">
+                    <input type="text" @bind="_backgroundColor" placeholder="#CCCCCC" class="flex-grow px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500" />
+                    <input type="color" @bind="_backgroundColor" class="h-10 w-10 border border-gray-300 rounded-md" />
+                </div>
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Text Color:</label>
+                <div class="flex space-x-2">
+                    <input type="text" @bind="_textColor" placeholder="#333333" class="flex-grow px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500" />
+                    <input type="color" @bind="_textColor" class="h-10 w-10 border border-gray-300 rounded-md" />
+                </div>
+            </div>
+        </div>
+        
+        <div class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Custom Text:</label>
+                <input type="text" @bind="_text" placeholder="Leave empty for dimensions" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500" />
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Service:</label>
+                <select @bind="_selectedService" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                    @foreach (var service in _services)
+                    {
+                        <option value="@service.Key">@service.Value</option>
+                    }
+                </select>
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Format:</label>
+                <select @bind="_selectedFormat" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                    @foreach (var format in _formats)
+                    {
+                        <option value="@format">@format.ToUpper()</option>
+                    }
+                </select>
+            </div>
+            
+            <div class="pt-4">
+                <label class="flex items-center">
+                    <input type="checkbox" @bind="_showDimensions" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" />
+                    <span class="ml-2 text-sm text-gray-700">Show dimensions in image</span>
+                </label>
+            </div>
+        </div>
+    </div>
+    
+    <div class="mt-6">
+        <button @onclick="GeneratePlaceholder" class="w-full px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md transition-colors">
+            Generate Placeholder
+        </button>
+    </div>
+    
+    @if (!string.IsNullOrEmpty(_placeholderUrl))
+    {
+        <div class="mt-6 p-4 bg-gray-50 border border-gray-200 rounded-md">
+            <div class="flex justify-between items-center mb-3">
+                <h3 class="text-lg font-medium text-gray-900">Generated URL</h3>
+                <button @onclick="CopyToClipboard" class="px-3 py-1 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-md text-sm flex items-center transition-colors">
+                    <span class="mr-1">Copy</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                    </svg>
+                </button>
+            </div>
+            <div class="bg-white p-3 border border-gray-300 rounded overflow-x-auto">
+                <code class="text-sm text-gray-800">@_placeholderUrl</code>
+            </div>
+        </div>
+        
+        <div class="mt-6">
+            <h3 class="text-lg font-medium text-gray-900 mb-3">Preview</h3>
+            <div class="flex justify-center bg-gray-100 border border-gray-200 rounded-md p-4">
+                <img src="@_placeholderUrl" alt="Placeholder preview" class="max-w-full h-auto shadow-md" />
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    // Required properties from ToolComponentBase
+    public override string Name => "Placeholder Image Generator";
+    public override string Description => "Generate custom placeholder images for your designs and layouts";
+    public override string Group => "Image and Video Tools";
+    public override string Icon => "📷";
+    
+    // Image properties
+    private int _width = 600;
+    private int _height = 400;
+    private string _backgroundColor = "#CCCCCC";
+    private string _textColor = "#333333";
+    private string _text = "";
+    private bool _showDimensions = true;
+    private string _placeholderUrl = "";
+    
+    // Format options
+    private string _selectedFormat = "jpg";
+    private List<string> _formats = new List<string> { "jpg", "jpeg", "png", "gif", "webp" };
+    
+    // Services
+    private string _selectedService = "placeholder.com";
+    private Dictionary<string, string> _services = new Dictionary<string, string>
+    {
+        { "placeholder.com", "Placeholder.com" },
+        { "placehold.co", "Placehold.co" },
+        { "placecats.com", "PlaceCats (cat images)" },
+        { "picsum.photos", "Lorem Picsum (real photos)" },
+        { "dummyimage.com", "DummyImage.com" }
+    };
+    
+    // Generate placeholder URL
+    private void GeneratePlaceholder()
+    {
+        StringBuilder urlBuilder = new StringBuilder();
+        
+        // Clean inputs
+        var bgColor = _backgroundColor.Replace("#", "");
+        var txtColor = _textColor.Replace("#", "");
+        var displayText = string.IsNullOrEmpty(_text) ? (_showDimensions ? $"{_width}x{_height}" : "") : _text;
+        
+        // Create URL based on selected service
+        switch (_selectedService)
+        {
+            case "placeholder.com":
+                urlBuilder.Append($"https://via.placeholder.com/{_width}x{_height}");
+                if (!string.IsNullOrEmpty(bgColor) && !string.IsNullOrEmpty(txtColor))
+                {
+                    urlBuilder.Append($"/{bgColor}/{txtColor}");
+                }
+                if (!string.IsNullOrEmpty(displayText))
+                {
+                    urlBuilder.Append($"?text={HttpUtility.UrlEncode(displayText)}");
+                }
+                break;
+                
+            case "placehold.co":
+                urlBuilder.Append($"https://placehold.co/{_width}x{_height}");
+                if (!string.IsNullOrEmpty(bgColor))
+                {
+                    urlBuilder.Append($"/{bgColor}");
+                    if (!string.IsNullOrEmpty(txtColor))
+                    {
+                        urlBuilder.Append($"/{txtColor}");
+                    }
+                }
+                urlBuilder.Append($"/{_selectedFormat}");
+                if (!string.IsNullOrEmpty(displayText))
+                {
+                    urlBuilder.Append($"?text={HttpUtility.UrlEncode(displayText)}");
+                }
+                break;
+                
+            case "placecats.com":
+                urlBuilder.Append($"https://placecats.com/{_width}/{_height}");
+                break;
+                
+            case "picsum.photos":
+                urlBuilder.Append($"https://picsum.photos/{_width}/{_height}");
+                break;
+                
+            case "dummyimage.com":
+                urlBuilder.Append($"https://dummyimage.com/{_width}x{_height}");
+                if (!string.IsNullOrEmpty(bgColor) && !string.IsNullOrEmpty(txtColor))
+                {
+                    urlBuilder.Append($"/{bgColor}/{txtColor}");
+                }
+                if (!string.IsNullOrEmpty(displayText))
+                {
+                    urlBuilder.Append($"&text={HttpUtility.UrlEncode(displayText)}");
+                }
+                break;
+        }
+        
+        _placeholderUrl = urlBuilder.ToString();
+    }
+    
+    // Copy URL to clipboard
+    private async Task CopyToClipboard()
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", _placeholderUrl);
+        }
+        catch (Exception)
+        {
+            // Handle any clipboard errors
+        }
+    }
+}

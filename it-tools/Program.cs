@@ -5,6 +5,8 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using it_tools.Components.Auth;
 using it_tools.Data.Services;
 using it_tools.Data.Repositories;
+using System.IO.Abstractions;
+using Microsoft.Extensions.DependencyInjection; // Thêm namespace
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -24,8 +26,8 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
     {
         options.LoginPath = "/login";
         options.LogoutPath = "/logout";
-        options.AccessDeniedPath = "/access-denied"; // Trang khi bị từ chối truy cập
-        options.ExpireTimeSpan = TimeSpan.FromMinutes(60); // Thời gian hết hạn cookie
+        options.AccessDeniedPath = "/access-denied";
+        options.ExpireTimeSpan = TimeSpan.FromMinutes(60);
     });
 
 builder.Services.AddAuthorization(options =>
@@ -49,8 +51,11 @@ builder.Services.AddScoped<ISearchService, SearchService>();
 
 builder.Services.AddScoped<IAdminService, AdminService>();
 
-// Đăng ký CleanupService
 builder.Services.AddSingleton<CleanupService>();
+builder.Services.AddHostedService<CleanupService>();
+
+// Đăng ký IFileSystem
+builder.Services.AddSingleton<IFileSystem, FileSystem>();
 
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
@@ -63,18 +68,12 @@ using (var scope = app.Services.CreateScope())
     await DbInitializer.SeedAdminUser(contextFactory);
 }
 
-// Gọi CleanupService để xóa các thư mục "pending deletions" khi ứng dụng khởi động
-app.Services.GetRequiredService<CleanupService>().CleanupPendingDeletions();
-
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
-    // Có thể thêm middleware hoặc logic cho môi trường Development
 }
 else
 {
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
 
@@ -83,8 +82,8 @@ app.UseStaticFiles();
 
 app.UseRouting();
 
-app.UseAuthentication(); // Thêm middleware xác thực
-app.UseAuthorization(); // Thêm middleware phân quyền
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.UseAntiforgery();
 

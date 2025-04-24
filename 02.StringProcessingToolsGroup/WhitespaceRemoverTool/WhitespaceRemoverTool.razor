@@ -1,0 +1,349 @@
+﻿@using it_tools.ToolDevelopment.Base
+@using it_tools.ToolDevelopment.Attributes
+@using System.Text
+@using System.Collections.Generic
+@using System.Text.RegularExpressions
+@attribute [ToolComponentAttribute(true)]
+@inherits ToolComponentBase
+
+<div class="p-6 bg-white rounded-lg shadow-lg">
+    <div class="flex items-center mb-6">
+        <div class="mr-3 bg-indigo-100 p-2 rounded-lg">
+            <span class="text-2xl">@Icon</span>
+        </div>
+        <div>
+            <h2 class="text-2xl font-bold text-gray-800">@Name</h2>
+            <p class="text-gray-600">@Description</p>
+        </div>
+    </div>
+    
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- Input Panel -->
+        <div class="bg-gray-50 p-5 rounded-lg border border-gray-200">
+            <h3 class="text-lg font-semibold text-gray-700 mb-4">Input Text</h3>
+            
+            <div class="space-y-4">
+                <div>
+                    <textarea 
+                        @bind="_inputText" 
+                        class="w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 h-48"
+                        placeholder="Enter text with whitespace to clean..."></textarea>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-3">Whitespace Removal Options</label>
+                    <div class="space-y-2">
+                        <div class="flex items-center">
+                            <input 
+                                type="checkbox" 
+                                id="trimStart" 
+                                @bind="_trimStart" 
+                                class="mr-2 h-4 w-4 text-indigo-600 focus:ring-indigo-500 rounded" />
+                            <label for="trimStart" class="text-sm text-gray-700">Remove leading whitespace</label>
+                        </div>
+                        
+                        <div class="flex items-center">
+                            <input 
+                                type="checkbox" 
+                                id="trimEnd" 
+                                @bind="_trimEnd" 
+                                class="mr-2 h-4 w-4 text-indigo-600 focus:ring-indigo-500 rounded" />
+                            <label for="trimEnd" class="text-sm text-gray-700">Remove trailing whitespace</label>
+                        </div>
+                        
+                        <div class="flex items-center">
+                            <input 
+                                type="checkbox" 
+                                id="collapseSpaces" 
+                                @bind="_collapseSpaces" 
+                                class="mr-2 h-4 w-4 text-indigo-600 focus:ring-indigo-500 rounded" />
+                            <label for="collapseSpaces" class="text-sm text-gray-700">Collapse multiple spaces into one</label>
+                        </div>
+                        
+                        <div class="flex items-center">
+                            <input 
+                                type="checkbox" 
+                                id="removeLineBreaks" 
+                                @bind="_removeLineBreaks" 
+                                class="mr-2 h-4 w-4 text-indigo-600 focus:ring-indigo-500 rounded" />
+                            <label for="removeLineBreaks" class="text-sm text-gray-700">Remove line breaks</label>
+                        </div>
+                        
+                        <div class="flex items-center">
+                            <input 
+                                type="checkbox" 
+                                id="removeAllWhitespace" 
+                                @bind="_removeAllWhitespace" 
+                                class="mr-2 h-4 w-4 text-indigo-600 focus:ring-indigo-500 rounded" />
+                            <label for="removeAllWhitespace" class="text-sm text-gray-700">Remove all whitespace (extreme)</label>
+                        </div>
+
+                        <div class="flex items-center">
+                            <input 
+                                type="checkbox" 
+                                id="normalizeLineEndings" 
+                                @bind="_normalizeLineEndings" 
+                                class="mr-2 h-4 w-4 text-indigo-600 focus:ring-indigo-500 rounded" />
+                            <label for="normalizeLineEndings" class="text-sm text-gray-700">Normalize line endings (CRLF/LF)</label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Line Ending Format</label>
+                    <div class="flex items-center space-x-4">
+                        <div class="flex items-center">
+                            <input 
+                                type="radio" 
+                                id="windows" 
+                                name="lineEnding" 
+                                value="windows" 
+                                checked="@(_lineEndingFormat == "windows")" 
+                                @onchange="@(e => _lineEndingFormat = "windows")" 
+                                class="mr-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500" 
+                                disabled="@(!_normalizeLineEndings)" />
+                            <label for="windows" class="text-sm text-gray-700">Windows (CRLF)</label>
+                        </div>
+                        <div class="flex items-center">
+                            <input 
+                                type="radio" 
+                                id="unix" 
+                                name="lineEnding" 
+                                value="unix" 
+                                checked="@(_lineEndingFormat == "unix")" 
+                                @onchange="@(e => _lineEndingFormat = "unix")" 
+                                class="mr-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500" 
+                                disabled="@(!_normalizeLineEndings)" />
+                            <label for="unix" class="text-sm text-gray-700">Unix (LF)</label>
+                        </div>
+                    </div>
+                </div>
+                
+                <button 
+                    @onclick="CleanWhitespace" 
+                    class="w-full px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-md shadow-sm transition duration-150 ease-in-out">
+                    Clean Whitespace
+                </button>
+            </div>
+        </div>
+        
+        <!-- Output Panel -->
+        <div class="bg-gray-50 p-5 rounded-lg border border-gray-200">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold text-gray-700">Cleaned Text</h3>
+                @if (!string.IsNullOrEmpty(_outputText))
+                {
+                    <div class="flex space-x-2">
+                        <button 
+                            @onclick="CopyToClipboard" 
+                            class="px-3 py-1 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-md text-sm flex items-center transition duration-150 ease-in-out">
+                            <span>Copy</span>
+                        </button>
+                        <button 
+                            @onclick="ClearOutput" 
+                            class="px-3 py-1 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-md text-sm flex items-center transition duration-150 ease-in-out">
+                            <span>Clear</span>
+                        </button>
+                    </div>
+                }
+            </div>
+            
+            <div class="h-48 overflow-auto border border-gray-200 rounded-md bg-white p-3">
+                @if (!string.IsNullOrEmpty(_outputText))
+                {
+                    <pre class="text-sm whitespace-pre-wrap text-gray-800">@_outputText</pre>
+                }
+                else
+                {
+                    <div class="h-full flex items-center justify-center text-gray-400">
+                        <p>Cleaned text will appear here</p>
+                    </div>
+                }
+            </div>
+            
+            @if (!string.IsNullOrEmpty(_statusMessage))
+            {
+                <div class="mt-2 @(_isError ? "text-red-600" : "text-green-600") text-sm">
+                    @_statusMessage
+                </div>
+            }
+            
+            <div class="mt-5">
+                <h4 class="text-md font-medium text-gray-700 mb-3">Text Statistics</h4>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="p-3 bg-white rounded-lg border border-gray-200 flex flex-col">
+                        <span class="text-xs text-gray-500">Original Length</span>
+                        <div class="flex items-end justify-between mt-1">
+                            <span class="text-2xl font-bold text-gray-800">@(_inputText?.Length ?? 0)</span>
+                            <span class="text-sm text-gray-500">characters</span>
+                        </div>
+                    </div>
+                    
+                    <div class="p-3 bg-white rounded-lg border border-gray-200 flex flex-col">
+                        <span class="text-xs text-gray-500">Cleaned Length</span>
+                        <div class="flex items-end justify-between mt-1">
+                            <span class="text-2xl font-bold text-gray-800">@(_outputText?.Length ?? 0)</span>
+                            <span class="text-sm text-gray-500">characters</span>
+                        </div>
+                    </div>
+                    
+                    <div class="p-3 bg-white rounded-lg border border-gray-200 flex flex-col">
+                        <span class="text-xs text-gray-500">Characters Removed</span>
+                        <div class="flex items-end justify-between mt-1">
+                            <span class="text-2xl font-bold @(GetCharactersRemoved() > 0 ? "text-green-600" : "text-gray-400")">@GetCharactersRemoved()</span>
+                            <span class="text-sm text-gray-500">(@GetRemovalPercentage()%)</span>
+                        </div>
+                    </div>
+                    
+                    <div class="p-3 bg-white rounded-lg border border-gray-200 flex flex-col">
+                        <span class="text-xs text-gray-500">Whitespace Count</span>
+                        <div class="flex items-end justify-between mt-1">
+                            <span class="text-2xl font-bold text-gray-800">@CountWhitespace(_outputText)</span>
+                            <span class="text-sm text-gray-500">remaining</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private string _inputText = "";
+    private string _outputText = "";
+    private string _statusMessage = "";
+    private bool _isError = false;
+    
+    private bool _trimStart = true;
+    private bool _trimEnd = true;
+    private bool _collapseSpaces = true;
+    private bool _removeLineBreaks = false;
+    private bool _removeAllWhitespace = false;
+    private bool _normalizeLineEndings = false;
+    private string _lineEndingFormat = "windows"; // windows (CRLF) or unix (LF)
+
+    // Implement required properties from ToolComponentBase
+    public override string Name => "Whitespace Remover";
+    public override string Description => "Remove unwanted whitespace from text using various cleaning options";
+    public override string Group => "String Processing Tools";
+    public override string Icon => "✂️";
+    
+    private void CopyToClipboard()
+    {
+        try
+        {
+            _statusMessage = "Copied to clipboard!";
+            _isError = false;
+            // Note: Actual clipboard functionality must be implemented client-side with JS interop
+        }
+        catch (Exception ex)
+        {
+            _statusMessage = $"Error copying to clipboard: {ex.Message}";
+            _isError = true;
+        }
+    }
+    
+    private void ClearOutput()
+    {
+        _outputText = "";
+        _statusMessage = "";
+    }
+    
+    private int GetCharactersRemoved()
+    {
+        int inputLength = _inputText?.Length ?? 0;
+        int outputLength = _outputText?.Length ?? 0;
+        return Math.Max(0, inputLength - outputLength);
+    }
+    
+    private int CountWhitespace(string text)
+    {
+        if (string.IsNullOrEmpty(text))
+            return 0;
+            
+        return text.Count(char.IsWhiteSpace);
+    }
+    
+    private string GetRemovalPercentage()
+    {
+        int inputLength = _inputText?.Length ?? 0;
+        if (inputLength == 0)
+            return "0";
+            
+        int charactersRemoved = GetCharactersRemoved();
+        double percentage = (double)charactersRemoved / inputLength * 100;
+        return percentage.ToString("0.0");
+    }
+    
+    private void CleanWhitespace()
+    {
+        try
+        {
+            _statusMessage = "";
+            _isError = false;
+            
+            if (string.IsNullOrEmpty(_inputText))
+            {
+                _statusMessage = "Please enter some text to clean";
+                _isError = true;
+                return;
+            }
+            
+            string result = _inputText;
+            
+            // When "Remove all whitespace" is selected, ignore other options
+            if (_removeAllWhitespace)
+            {
+                result = Regex.Replace(result, @"\s+", "");
+                _outputText = result;
+                _statusMessage = "All whitespace has been removed";
+                return;
+            }
+            
+            // Apply selected whitespace cleaning options
+            if (_trimStart)
+            {
+                result = result.TrimStart();
+            }
+            
+            if (_trimEnd)
+            {
+                result = result.TrimEnd();
+            }
+            
+            if (_normalizeLineEndings)
+            {
+                // First, normalize all line endings to LF
+                result = Regex.Replace(result, @"\r\n|\r|\n", "\n");
+                
+                // Then convert to the requested format
+                if (_lineEndingFormat == "windows")
+                {
+                    // Convert to Windows format (CRLF)
+                    result = Regex.Replace(result, @"\n", "\r\n");
+                }
+                // If Unix format (LF) is selected, we already normalized to it above
+            }
+            
+            if (_removeLineBreaks)
+            {
+                // Replace all line breaks with spaces
+                result = Regex.Replace(result, @"\r\n|\r|\n", " ");
+            }
+            
+            if (_collapseSpaces)
+            {
+                // Replace sequences of whitespace characters with a single space
+                result = Regex.Replace(result, @"\s+", " ");
+            }
+            
+            _outputText = result;
+            _statusMessage = "Text has been cleaned successfully";
+        }
+        catch (Exception ex)
+        {
+            _statusMessage = $"Error while cleaning whitespace: {ex.Message}";
+            _isError = true;
+        }
+    }
+}

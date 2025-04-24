@@ -29,7 +29,7 @@
 </div>
 
 <!-- Menu -->
-<div class="flex-1 overflow-y-auto bg-white sidebar-scrollbar">
+<div class="flex-1 overflow-auto bg-white">
     @if (DisplayToolGroups != null)
     {
         @foreach (var group in DisplayToolGroups)
@@ -90,7 +90,7 @@
             </div>
         }
     }
-    
+</div>
     <!-- Bottom information -->
     <div class="mt-auto border-t border-gray-100 p-4">
         <div class="text-xs text-gray-500 text-center">
@@ -98,7 +98,6 @@
             <p class="mt-1">All tools in one place</p>
         </div>
     </div>
-</div>
 
 @code {
     private bool isLoggedIn;
