@@ -188,7 +188,7 @@
                 }
                 else
                 {
-                    await FavouriteToolService.RemoveFavouriteToolAsync(currentUserId, dto.Id);
+                    await FavouriteToolService.AddFavouriteToolAsync(currentUserId, dto.Id);
                     dto.IsFavorite = true;
                 }
                 
