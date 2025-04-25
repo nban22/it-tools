@@ -1,134 +1,130 @@
 using Microsoft.EntityFrameworkCore;
-using it_tools.Data.DTOs;
 using it_tools.Data.Models;
 
 namespace it_tools.Data.Repositories;
-public class UserRepository(IDbContextFactory<ApplicationDbContext> contextFactory, ILogger<UserRepository> logger) : IUserRepository
+
+public class UserRepository : IUserRepository
 {
-    private readonly IDbContextFactory<ApplicationDbContext> _contextFactory = contextFactory;
-    private readonly ILogger<UserRepository> _logger = logger;
-    public async Task AddFavoriteTool(string userId, string toolId)
+    private readonly IDbContextFactory<ApplicationDbContext> _contextFactory;
+    private readonly ILogger<UserRepository> _logger;
+
+    public UserRepository(IDbContextFactory<ApplicationDbContext> contextFactory, ILogger<UserRepository> logger)
     {
-        try
-        {
-            using var context = _contextFactory.CreateDbContext();
-            var favorite = new FavouriteTool
-            {
-                Id = Guid.NewGuid().ToString(),
-                UserId = userId,
-                ToolId = toolId
-            };
-            context.FavouriteTools.Add(favorite);
-            await context.SaveChangesAsync();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to add favorite tool {ToolId} for user {UserId}", toolId, userId);
-            throw;
-        }
+        _contextFactory = contextFactory;
+        _logger = logger;
     }
 
-    public async Task RemoveFavoriteTool(string userId, string toolId)
+    public async Task<User?> GetUserEntityByIdAsync(Guid userId)
     {
         try
         {
             using var context = _contextFactory.CreateDbContext();
-            var favorite = await context.FavouriteTools
-                .FirstOrDefaultAsync(f => f.UserId == userId && f.ToolId == toolId);
-
-            if (favorite != null)
-            {
-                context.FavouriteTools.Remove(favorite);
-                await context.SaveChangesAsync();
-            }
-            else
-            {
-                _logger.LogWarning("Favorite tool {ToolId} not found for user {UserId}", toolId, userId);
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to remove favorite tool {ToolId} for user {UserId}", toolId, userId);
-            throw;
-        }
-    }
-
-    public async Task<List<ToolDto>> GetFavoriteTools(string userId)
-    {
-        try
-        {
-            using var context = _contextFactory.CreateDbContext();
-            var favoriteTools = await context.FavouriteTools
-                .Where(f => f.UserId == userId)
-                .Include(f => f.Tool)
-                .Select(f => new ToolDto
-                {
-                    Id = f.Tool != null ? f.Tool.Id : string.Empty,
-                    Name = f.Tool != null ? f.Tool.Name : string.Empty,
-                    Description = f.Tool != null ? f.Tool.Description : string.Empty,
-                })
-                .ToListAsync();
-            return favoriteTools;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to retrieve favorite tools for user {UserId}", userId);
-            throw;
-        }
-    }
-    public async Task<UserDto?> GetUserById(string userId)
-    {
-        try
-        {
-            using var context = _contextFactory.CreateDbContext();
-            var user = await context.Users
+            return await context.Users
                 .Include(u => u.FavouriteTools!)
                 .ThenInclude(ft => ft.Tool)
                 .FirstOrDefaultAsync(u => u.Id == userId);
-
-            if (user == null) return null;
-
-            var userDto = new UserDto
-            {
-                Id = user.Id,
-                Username = user.Username,
-                Email = user.Email,
-                IsPremium = user.IsPremium,
-                CreatedAt = user.CreatedAt,
-                PremiumRequest = user.PremiumRequest,
-                FavoriteTools = user.FavouriteTools?.Select(ft => new ToolDto
-                {
-                    Id = ft.Tool != null ? ft.Tool.Id : string.Empty,
-                    Name = ft.Tool != null ? ft.Tool.Name : string.Empty,
-                    Description = ft.Tool != null ? ft.Tool.Description : string.Empty,
-                }).ToList() ?? new List<ToolDto>()
-            };
-
-            return userDto;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to retrieve user {UserId}", userId);
+            _logger.LogError(ex, "Failed to retrieve user entity with ID {UserId}", userId);
             throw;
         }
-
-
     }
 
-    public async Task<bool> SetUserPremiumStatus(string userId, bool isPremium)
+    public async Task<User?> GetUserEntityByEmailAsync(string email)
     {
-        using var context = await _contextFactory.CreateDbContextAsync();
-
-        var user = await context.Users.FindAsync(userId);
-        if (user == null)
+        try
         {
-            return false;
+            using var context = _contextFactory.CreateDbContext();
+            return await context.Users
+                .FirstOrDefaultAsync(u => u.Email == email);
         }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to retrieve user entity with email {Email}", email);
+            throw;
+        }
+    }
 
-        user.IsPremium = isPremium;
-        user.PremiumRequest = false; // Clear any pending requests
+    public async Task<User> CreateUserAsync(User user)
+    {
+        try
+        {
+            using var context = _contextFactory.CreateDbContext();
+            context.Users.Add(user);
+            await context.SaveChangesAsync();
+            return user;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to create user with email {Email}", user.Email);
+            throw;
+        }
+    }
 
-        var result = await context.SaveChangesAsync();
-        return result > 0;
+    public async Task<bool> UpdateUserAsync(User user)
+    {
+        try
+        {
+            using var context = _contextFactory.CreateDbContext();
+            context.Users.Update(user);
+            var result = await context.SaveChangesAsync();
+            return result > 0;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to update user with ID {UserId}", user.Id);
+            throw;
+        }
+    }
+
+    public async Task<bool> UpdateUserPropertyAsync(Guid userId, string propertyName, object value)
+    {
+        try
+        {
+            using var context = _contextFactory.CreateDbContext();
+            var user = await context.Users.FindAsync(userId);
+            if (user == null)
+            {
+                return false;
+            }
+
+            var property = typeof(User).GetProperty(propertyName);
+            if (property == null)
+            {
+                throw new ArgumentException($"Property {propertyName} not found on User entity", nameof(propertyName));
+            }
+
+            property.SetValue(user, value);
+            var result = await context.SaveChangesAsync();
+            return result > 0;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to update {PropertyName} for user {UserId}", propertyName, userId);
+            throw;
+        }
+    }
+
+    public async Task<bool> DeleteUserAsync(Guid userId)
+    {
+        try
+        {
+            using var context = _contextFactory.CreateDbContext();
+            var user = await context.Users.FindAsync(userId);
+            if (user == null)
+            {
+                return false;
+            }
+
+            context.Users.Remove(user);
+            var result = await context.SaveChangesAsync();
+            return result > 0;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to delete user with ID {UserId}", userId);
+            throw;
+        }
     }
 }

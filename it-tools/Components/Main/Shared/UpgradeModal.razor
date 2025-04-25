@@ -1,5 +1,5 @@
-@using it_tools.Data.Repositories
-@inject IUserRepository UserRepository
+@using it_tools.Data.Services
+@inject IUserService UserService
 @inject NavigationManager NavigationManager
 
 <div class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
@@ -182,7 +182,7 @@
         {
             try
             {
-                await UserRepository.SetUserPremiumStatus(CurrentUserId, true);
+                await UserService.SetUserPremiumStatusAsync(CurrentUserId, true);
             }
             catch (Exception ex)
             {

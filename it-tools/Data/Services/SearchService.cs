@@ -34,7 +34,7 @@ public class SearchService(ApplicationDbContext context, IToolRepository toolRep
                         t.Slug != null && t.Slug.ToLower().Contains(query)))
             .Select(t => new SearchResultDto
             {
-                Id = t.Id,
+                Id = t.Id.ToString(),
                 Name = t.Name ?? "",
                 Description = t.Description ?? "",
                 Type = "Tool",
