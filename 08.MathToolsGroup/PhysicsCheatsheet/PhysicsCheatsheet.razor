@@ -1,0 +1,259 @@
+﻿@using it_tools.ToolDevelopment.Base
+@using it_tools.ToolDevelopment.Attributes
+@using Microsoft.JSInterop
+@inject IJSRuntime JSRuntime
+@inherits ToolComponentBase
+
+<div class="max-w-5xl mx-auto p-6 bg-white rounded-2xl shadow-lg animate-fade-in">
+    <div class="flex flex-col sm:flex-row justify-between items-center mb-8 gap-4">
+        <h3 class="text-2xl font-bold text-gray-900 tracking-tight flex items-center">
+            <svg class="h-6 w-6 text-indigo-600 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l5.447-2.724A1 1 0 0021 13.382V2.618a1 1 0 00-1.447-.894L15 4m0 13l-6-3" />
+            </svg>
+            @Name
+        </h3>
+        <div class="flex items-center gap-4">
+            <div class="relative w-full sm:w-64">
+                <input type="text" 
+                       @bind="searchQuery" 
+                       @bind:event="oninput" 
+                       placeholder="Search formulas..." 
+                       class="pl-10 pr-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-white shadow-sm text-gray-900 placeholder-gray-500 w-full" />
+                <svg class="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+            </div>
+            <button @onclick="CopyCheatsheet" 
+                    disabled="@isCopying" 
+                    class="flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all duration-200 shadow-sm disabled:opacity-50">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+                @(isCopying ? "Copying..." : "Copy Cheatsheet")
+            </button>
+        </div>
+    </div>
+
+    <p class="text-gray-600 mb-8">@Description</p>
+
+    @if (filteredSections.Any())
+    {
+        <div class="space-y-8">
+            @foreach (var (key, value) in filteredSections)
+            {
+                <div class="animate-slide-up">
+                    <button @onclick="() => ToggleSection(key)" 
+                            class="w-full flex items-center justify-between text-lg font-semibold text-gray-900 mb-4 hover:text-indigo-600 transition-colors duration-200">
+                        <span class="flex items-center">
+                            <span class="inline-block w-3 h-3 bg-indigo-500 rounded-full mr-2 animate-pulse"></span>
+                            @key
+                        </span>
+                        <svg class="h-5 w-5 transform transition-transform duration-200 @(expandedSections.Contains(key) ? "rotate-180" : "")" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </button>
+                    @if (expandedSections.Contains(key))
+                    {
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            @foreach (var formula in value)
+                            {
+                                <div class="p-4 bg-gray-50 rounded-lg flex justify-between items-center transform transition-all duration-300 hover:bg-indigo-50 hover:shadow-sm animate-fade-in-up">
+                                    <span class="font-mono text-gray-900 font-medium">@formula.Name</span>
+                                    <span class="text-gray-700 text-sm">@formula.Equation</span>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="text-center py-8">
+            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l5.447-2.724A1 1 0 0021 13.382V2.618a1 1 0 00-1.447-.894L15 4m0 13l-6-3" />
+            </svg>
+            <p class="mt-2 text-gray-500">No formulas found.</p>
+        </div>
+    }
+</div>
+
+<!-- Toast Notification -->
+@if (showToast)
+{
+    <div class="fixed bottom-6 right-6 z-50 animate-toast-in">
+        <div class="flex items-center bg-@(toastSuccess ? "green" : "red")-600 text-white px-4 py-3 rounded-lg shadow-lg">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="@(toastSuccess ? "M5 13l4 4L19 7" : "M6 18L18 6M6 6l12 12")" />
+            </svg>
+            <span>@toastMessage</span>
+        </div>
+    </div>
+}
+
+<style>
+    @@keyframes fadeIn {
+        0% { opacity: 0; transform: translateY(10px); }
+        100% { opacity: 1; transform: translateY(0); }
+    }
+
+    @@keyframes slideUp {
+        0% { opacity: 0; transform: translateY(20px); }
+        100% { opacity: 1; transform: translateY(0); }
+    }
+
+    @@keyframes fadeInUp {
+        0% { opacity: 0; transform: translateY(10px); }
+        100% { opacity: 1; transform: translateY(0); }
+    }
+
+    @@keyframes toastIn {
+        0% { opacity: 0; transform: translateX(20px); }
+        100% { opacity: 1; transform: translateX(0); }
+    }
+
+    .animate-fade-in {
+        animation: fadeIn 0.5s ease-out;
+    }
+
+    .animate-slide-up {
+        animation: slideUp 0.6s ease-out;
+    }
+
+    .animate-fade-in-up {
+        animation: fadeInUp 0.4s ease-out;
+    }
+
+    .animate-toast-in {
+        animation: toastIn 0.3s ease-out;
+    }
+</style>
+
+@code {
+    private bool isCopying { get; set; } = false;
+    private bool showToast { get; set; } = false;
+    private bool toastSuccess { get; set; } = false;
+    private string toastMessage { get; set; } = "";
+    private string searchQuery { get; set; } = "";
+    private HashSet<string> expandedSections { get; set; } = new HashSet<string>();
+
+    public override string Name => "Physics Cheatsheet";
+    public override string Description => "A comprehensive cheatsheet for all major physics quantities and formulas.";
+    public override string Slug => "physics-cheatsheet";
+    public override string Group => "Math Tools";
+    public override string Icon => "⚛️";
+
+    private readonly Dictionary<string, List<(string Name, string Equation)>> formulaSections = new()
+    {
+        {
+            "Mechanics", new List<(string, string)>
+            {
+                ("Velocity (v)", "v = d/t"),
+                ("Acceleration (a)", "a = Δv/Δt"),
+                ("Force (F)", "F = m·a"),
+                ("Momentum (p)", "p = m·v")
+            }
+        },
+        {
+            "Energy", new List<(string, string)>
+            {
+                ("Kinetic Energy (KE)", "KE = (1/2)·m·v²"),
+                ("Potential Energy (PE)", "PE = m·g·h"),
+                ("Work (W)", "W = F·d·cos(θ)"),
+                ("Power (P)", "P = W/t")
+            }
+        },
+        {
+            "Thermodynamics", new List<(string, string)>
+            {
+                ("Heat (Q)", "Q = m·c·ΔT"),
+                ("Ideal Gas Law", "PV = nRT"),
+                ("Entropy (S)", "ΔS = Q/T"),
+                ("Efficiency (η)", "η = (W/Qh)·100%")
+            }
+        },
+        {
+            "Electricity and Magnetism", new List<(string, string)>
+            {
+                ("Ohm's Law (V)", "V = I·R"),
+                ("Electric Power (P)", "P = V·I"),
+                ("Coulomb's Law (F)", "F = k·(q₁q₂/r²)"),
+                ("Magnetic Force (F)", "F = q·v·B·sin(θ)")
+            }
+        },
+        {
+            "Waves and Optics", new List<(string, string)>
+            {
+                ("Wave Speed (v)", "v = f·λ"),
+                ("Index of Refraction (n)", "n = c/v"),
+                ("Lens Formula", "1/f = 1/d₀ + 1/dᵢ"),
+                ("Doppler Effect (f')", "f' = f·(v ± v₀)/(v ± vₛ)")
+            }
+        },
+        {
+            "Modern Physics", new List<(string, string)>
+            {
+                ("Energy-Mass Equivalence", "E = mc²"),
+                ("Photon Energy (E)", "E = h·f"),
+                ("de Broglie Wavelength (λ)", "λ = h/p"),
+                ("Time Dilation (t')", "t' = t/√(1 - v²/c²)")
+            }
+        }
+    };
+
+    private Dictionary<string, List<(string Name, string Equation)>> filteredSections => formulaSections
+        .Where(s => string.IsNullOrWhiteSpace(searchQuery) || 
+                    s.Key.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ||
+                    s.Value.Any(f => f.Name.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) || 
+                                   f.Equation.Contains(searchQuery, StringComparison.OrdinalIgnoreCase)))
+        .ToDictionary(s => s.Key, s => s.Value);
+
+    protected override void OnInitialized()
+    {
+        expandedSections.UnionWith(formulaSections.Keys);
+    }
+
+    private void ToggleSection(string section)
+    {
+        if (expandedSections.Contains(section))
+            expandedSections.Remove(section);
+        else
+            expandedSections.Add(section);
+    }
+
+    private async Task CopyCheatsheet()
+    {
+        isCopying = true;
+        try
+        {
+            var cheatsheetText = string.Join("\n\n", filteredSections.Select(section =>
+                $"{section.Key}\n" + 
+                string.Join("\n", section.Value.Select(f => $"{f.Name} - {f.Equation}"))
+            ));
+
+            await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", cheatsheetText);
+            ShowToast(true, "Cheatsheet copied to clipboard!");
+        }
+        catch (Exception ex)
+        {
+            ShowToast(false, $"Error copying cheatsheet: {ex.Message}");
+        }
+        finally
+        {
+            isCopying = false;
+            StateHasChanged();
+        }
+    }
+
+    private async void ShowToast(bool success, string message)
+    {
+        toastSuccess = success;
+        toastMessage = message;
+        showToast = true;
+        StateHasChanged();
+        await Task.Delay(3000);
+        showToast = false;
+        StateHasChanged();
+    }
+}
