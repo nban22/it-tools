@@ -9,7 +9,7 @@
 
 @using Microsoft.EntityFrameworkCore
 @using it_tools.Data
-@using it_tools.Data.Repositories
+@using it_tools.Data.Services
 @using System.Reflection
 
 @if (isLoading)
@@ -194,7 +194,7 @@ else
     public string? Slug { get; set; }
 
     [Inject]
-    private IUserRepository UserRepository { get; set; } = default!;
+    private IUserService UserService { get; set; } = default!;
 
     private Type? toolComponentType;
     private string? loadError;
@@ -225,11 +225,16 @@ else
                 var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 
                 isAdmin = user.IsInRole("Admin"); // Check if the user is an admin
-                if (!string.IsNullOrEmpty(userId))
+                if (!string.IsNullOrEmpty(userId) && !isAdmin)
                 {
                     // Get user info from repository and check premium status
-                    var userData = await UserRepository.GetUserById(userId);
+                    var userData = await UserService.GetUserByIdAsync(userId);
                     isUserPremium = userData?.IsPremium ?? false;
+                }
+                else if (isAdmin)
+                {
+                    // Admin users can access all tools
+                    isUserPremium = true;
                 }
             }
 

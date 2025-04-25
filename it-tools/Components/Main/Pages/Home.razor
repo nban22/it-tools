@@ -9,7 +9,7 @@
     @using it_tools.Components.Main.Components
     @using it_tools.Data.Services
 
-    @inject IToolRepository ToolRepository
+    @inject IToolService ToolService
     @inject AuthenticationStateProvider AuthStateProvider
     @inject ToolStateService ToolStateService
     @inject ILogger<Home> Logger
@@ -65,12 +65,12 @@
                 isAuthenticated = true;
                 isAdmin = user.IsInRole("Admin"); // Check if the user is an admin
                 string userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "unknown";
-                tools = await ToolRepository.GetAllToolsForUserAsync(userId);
+                tools = await ToolService.GetAllToolsForUserAsync(userId);
             }
             else
             {
                 isAuthenticated = false;
-                tools = await ToolRepository.GetAllToolsForUnauthorizedAsync();
+                tools = await ToolService.GetAllToolsForUnauthorizedAsync();
             }
         }
 

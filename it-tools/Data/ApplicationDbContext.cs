@@ -20,24 +20,47 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
         modelBuilder.Entity<FavouriteTool>().HasKey(ft => ft.Id);
         modelBuilder.Entity<Admin>().HasKey(a => a.Id);
 
-        
+        // Email configuration - nvarchar(255) and not null
+        modelBuilder.Entity<User>()
+            .Property(u => u.Email)
+            .IsRequired()
+            .HasColumnType("varchar(255)");
 
-        base.OnModelCreating(modelBuilder);
+        modelBuilder.Entity<Admin>()
+            .Property(a => a.Email)
+            .IsRequired()
+            .HasColumnType("varchar(255)");
+
+        // Tool relationships
         modelBuilder.Entity<Tool>()
-        .HasOne(t => t.Group)
-        .WithMany(g => g.Tools)
-        .HasForeignKey(t => t.GroupId);
+            .HasOne(t => t.Group)
+            .WithMany(g => g.Tools)
+            .HasForeignKey(t => t.GroupId)
+            .IsRequired(); // GroupId not null
+
+        modelBuilder.Entity<Tool>()
+            .Property(t => t.DllPath)
+            .IsRequired(); // DllPath not null
 
         // Quan hệ giữa FavouriteTool và User
         modelBuilder.Entity<FavouriteTool>()
             .HasOne(ft => ft.User)
             .WithMany(u => u.FavouriteTools)
-            .HasForeignKey(ft => ft.UserId);
+            .HasForeignKey(ft => ft.UserId)
+            .IsRequired(); // UserId not null
 
         // Quan hệ giữa FavouriteTool và Tool
         modelBuilder.Entity<FavouriteTool>()
             .HasOne(ft => ft.Tool)
             .WithMany()
-            .HasForeignKey(ft => ft.ToolId);
+            .HasForeignKey(ft => ft.ToolId)
+            .IsRequired(); // ToolId not null
+
+        // Add unique constraint for UserId and ToolId in FavouriteTool
+        modelBuilder.Entity<FavouriteTool>()
+            .HasIndex(ft => new { ft.UserId, ft.ToolId })
+            .IsUnique();
+
+        base.OnModelCreating(modelBuilder);
     }
 }

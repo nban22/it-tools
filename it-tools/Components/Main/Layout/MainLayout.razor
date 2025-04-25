@@ -3,9 +3,10 @@
 @using it_tools.Components.Main.Components
 @inject NavigationManager NavigationManager
 @using it_tools.Data.Repositories
+@using it_tools.Data.Services
 @using System.Security.Claims
 @inject AuthenticationStateProvider AuthStateProvider
-@inject IUserRepository UserRepository
+@inject IUserService UserService
 
 <PageTitle>IT-Tools</PageTitle>
 
@@ -160,7 +161,7 @@
                 
                 if (!string.IsNullOrEmpty(currentUserId))
                 {
-                    var userData = await UserRepository.GetUserById(currentUserId);
+                    var userData = await UserService.GetUserByIdAsync(currentUserId);
                     userIsPremium = userData?.IsPremium ?? false;
                 }
             }

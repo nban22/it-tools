@@ -12,7 +12,7 @@ using it_tools.Data;
 namespace ittools.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20250410005403_InitialDB")]
+    [Migration("20250425053016_InitialDB")]
     partial class InitialDB
     {
         /// <inheritdoc />
@@ -27,11 +27,13 @@ namespace ittools.Migrations
 
             modelBuilder.Entity("it_tools.Data.Models.Admin", b =>
                 {
-                    b.Property<string>("Id")
-                        .HasColumnType("text");
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
 
                     b.Property<string>("Email")
-                        .HasColumnType("text");
+                        .IsRequired()
+                        .HasColumnType("varchar(255)");
 
                     b.Property<string>("PasswordHash")
                         .HasColumnType("text");
@@ -46,39 +48,41 @@ namespace ittools.Migrations
 
             modelBuilder.Entity("it_tools.Data.Models.FavouriteTool", b =>
                 {
-                    b.Property<string>("Id")
-                        .HasColumnType("text");
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
 
-                    b.Property<string>("ToolId")
-                        .IsRequired()
-                        .HasColumnType("text");
+                    b.Property<Guid>("ToolId")
+                        .HasColumnType("uuid");
 
-                    b.Property<string>("UserId")
-                        .IsRequired()
-                        .HasColumnType("text");
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
 
                     b.HasKey("Id");
 
                     b.HasIndex("ToolId");
 
-                    b.HasIndex("UserId");
+                    b.HasIndex("UserId", "ToolId")
+                        .IsUnique();
 
                     b.ToTable("FavouriteTools");
                 });
 
             modelBuilder.Entity("it_tools.Data.Models.Tool", b =>
                 {
-                    b.Property<string>("Id")
-                        .HasColumnType("text");
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
 
                     b.Property<string>("Description")
                         .HasColumnType("text");
 
                     b.Property<string>("DllPath")
+                        .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<string>("GroupId")
-                        .HasColumnType("text");
+                    b.Property<Guid>("GroupId")
+                        .HasColumnType("uuid");
 
                     b.Property<string>("Icon")
                         .HasColumnType("text");
@@ -104,8 +108,9 @@ namespace ittools.Migrations
 
             modelBuilder.Entity("it_tools.Data.Models.ToolGroup", b =>
                 {
-                    b.Property<string>("Id")
-                        .HasColumnType("text");
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
 
                     b.Property<string>("Description")
                         .IsRequired()
@@ -122,14 +127,16 @@ namespace ittools.Migrations
 
             modelBuilder.Entity("it_tools.Data.Models.User", b =>
                 {
-                    b.Property<string>("Id")
-                        .HasColumnType("text");
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Email")
-                        .HasColumnType("text");
+                        .IsRequired()
+                        .HasColumnType("varchar(255)");
 
                     b.Property<bool>("IsPremium")
                         .HasColumnType("boolean");
@@ -171,7 +178,9 @@ namespace ittools.Migrations
                 {
                     b.HasOne("it_tools.Data.Models.ToolGroup", "Group")
                         .WithMany("Tools")
-                        .HasForeignKey("GroupId");
+                        .HasForeignKey("GroupId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("Group");
                 });

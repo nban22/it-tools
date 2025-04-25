@@ -158,15 +158,15 @@
 
 @code {
     private bool isLoading = true;
-    private List<Tool>? tools;
+    private List<ToolDto>? tools;
     private string searchQuery = "";
     private bool showMessage = false;
     private string message = string.Empty;
     private bool messageIsError = false;
     private bool showDeleteModal = false;
-    private Tool? toolToDelete;
+    private ToolDto? toolToDelete;
 
-    private List<Tool>? filteredTools => tools?.Where(t =>
+    private List<ToolDto>? filteredTools => tools?.Where(t =>
         string.IsNullOrWhiteSpace(searchQuery) ||
         t.Name?.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) == true
     ).ToList();
@@ -174,11 +174,20 @@
     protected override async Task OnInitializedAsync()
     {
         using var dbContext = await DbContextFactory.CreateDbContextAsync();
-        tools = await dbContext.Tools.ToListAsync();
+        tools = await dbContext.Tools
+            .Select(t => new ToolDto
+            {
+                Id = t.Id.ToString(),
+                Name = t.Name,
+                IsEnabled = t.IsEnabled,
+                IsPremium = t.IsPremium,
+                Slug = t.Slug
+            })
+            .ToListAsync();
         isLoading = false;
     }
 
-    private void ShowDeleteModal(Tool tool)
+    private void ShowDeleteModal(ToolDto tool)
     {
         toolToDelete = tool;
         showDeleteModal = true;

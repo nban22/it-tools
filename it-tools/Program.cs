@@ -48,6 +48,8 @@ builder.Services.AddScoped<ToolStateService>();
 builder.Services.AddScoped<IToolGroupRepository, ToolGroupRepository>();
 builder.Services.AddScoped<ToolAssemblyService>();
 builder.Services.AddScoped<ISearchService, SearchService>();
+builder.Services.AddScoped<IFavouriteToolRepository, FavouriteToolRepository>();
+builder.Services.AddScoped<IFavouriteToolService, FavouriteToolService>();
 
 builder.Services.AddScoped<IAdminService, AdminService>();
 

@@ -15,10 +15,10 @@ namespace ittools.Migrations
                 name: "Admins",
                 columns: table => new
                 {
-                    Id = table.Column<string>(type: "text", nullable: false),
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
                     Username = table.Column<string>(type: "text", nullable: true),
                     PasswordHash = table.Column<string>(type: "text", nullable: true),
-                    Email = table.Column<string>(type: "text", nullable: true)
+                    Email = table.Column<string>(type: "varchar(255)", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -29,7 +29,7 @@ namespace ittools.Migrations
                 name: "ToolGroups",
                 columns: table => new
                 {
-                    Id = table.Column<string>(type: "text", nullable: false),
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
                     Name = table.Column<string>(type: "text", nullable: false),
                     Description = table.Column<string>(type: "text", nullable: false)
                 },
@@ -42,10 +42,10 @@ namespace ittools.Migrations
                 name: "Users",
                 columns: table => new
                 {
-                    Id = table.Column<string>(type: "text", nullable: false),
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
                     Username = table.Column<string>(type: "text", nullable: true),
                     PasswordHash = table.Column<string>(type: "text", nullable: true),
-                    Email = table.Column<string>(type: "text", nullable: true),
+                    Email = table.Column<string>(type: "varchar(255)", nullable: false),
                     IsPremium = table.Column<bool>(type: "boolean", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     PremiumRequest = table.Column<bool>(type: "boolean", nullable: false)
@@ -59,15 +59,15 @@ namespace ittools.Migrations
                 name: "Tools",
                 columns: table => new
                 {
-                    Id = table.Column<string>(type: "text", nullable: false),
-                    GroupId = table.Column<string>(type: "text", nullable: true),
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    GroupId = table.Column<Guid>(type: "uuid", nullable: false),
                     Name = table.Column<string>(type: "text", nullable: true),
                     Description = table.Column<string>(type: "text", nullable: true),
                     IsPremium = table.Column<bool>(type: "boolean", nullable: false),
                     IsEnabled = table.Column<bool>(type: "boolean", nullable: false),
                     Slug = table.Column<string>(type: "text", nullable: true),
                     Icon = table.Column<string>(type: "text", nullable: true),
-                    DllPath = table.Column<string>(type: "text", nullable: true)
+                    DllPath = table.Column<string>(type: "text", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -76,16 +76,17 @@ namespace ittools.Migrations
                         name: "FK_Tools_ToolGroups_GroupId",
                         column: x => x.GroupId,
                         principalTable: "ToolGroups",
-                        principalColumn: "Id");
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
                 name: "FavouriteTools",
                 columns: table => new
                 {
-                    Id = table.Column<string>(type: "text", nullable: false),
-                    UserId = table.Column<string>(type: "text", nullable: false),
-                    ToolId = table.Column<string>(type: "text", nullable: false)
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    UserId = table.Column<Guid>(type: "uuid", nullable: false),
+                    ToolId = table.Column<Guid>(type: "uuid", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -110,9 +111,10 @@ namespace ittools.Migrations
                 column: "ToolId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_FavouriteTools_UserId",
+                name: "IX_FavouriteTools_UserId_ToolId",
                 table: "FavouriteTools",
-                column: "UserId");
+                columns: new[] { "UserId", "ToolId" },
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_Tools_GroupId",
