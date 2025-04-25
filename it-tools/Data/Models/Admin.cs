@@ -1,8 +1,8 @@
 namespace it_tools.Data.Models;
 public class Admin
 {
-    public required string Id { get; set; }
+    public Guid Id { get; set; } = Guid.NewGuid(); // Changed to Guid for UUID
     public string? Username { get; set; }
     public string? PasswordHash { get; set; }
-    public string? Email { get; set; }
+    public required string Email { get; set; } // Made required (not null)
 }

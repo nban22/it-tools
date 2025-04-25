@@ -9,7 +9,7 @@ public static class DbInitializer
     public static async Task SeedAdminUser(IDbContextFactory<ApplicationDbContext> contextFactory)
     {
         using var context = await contextFactory.CreateDbContextAsync();
-        
+
         // Check if admin user already exists
         if (await context.Admins.AnyAsync())
         {
@@ -19,7 +19,7 @@ public static class DbInitializer
         // Create admin user
         var adminUser = new Admin
         {
-            Id = Guid.NewGuid().ToString(),
+            Id = Guid.NewGuid(),
             Username = "admin",
             Email = "admin@gmail.com",
             PasswordHash = BCrypt.Net.BCrypt.HashPassword("123456") // You should change this in production
@@ -27,14 +27,15 @@ public static class DbInitializer
 
         var adminUser1 = new Admin
         {
-            Id = Guid.NewGuid().ToString(),
+            Id = Guid.NewGuid(),
             Username = "admin1",
             Email = "admin1@gmail.com",
             PasswordHash = BCrypt.Net.BCrypt.HashPassword("123456") // You should change this in production
         };
+        
         var adminUser2 = new Admin
         {
-            Id = Guid.NewGuid().ToString(),
+            Id = Guid.NewGuid(),
             Username = "admin2",
             Email = "admin2@gmail.com",
             PasswordHash = BCrypt.Net.BCrypt.HashPassword("123456") // You should change this in production

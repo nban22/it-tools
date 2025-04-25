@@ -1,16 +1,17 @@
 ﻿@implements IDisposable
 
-@using it_tools.Data.DTOs
-@inject NavigationManager NavigationManager
-@inject AuthenticationStateProvider AuthenticationStateProvider
-@inject IToolRepository ToolRepository
 @using System.Security.Claims
+@using it_tools.Data.DTOs
 @using it_tools.Data.Repositories
 @using it_tools.Data.Services
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IFavouriteToolService FavouriteToolService
 @inject ILogger<NavMenu> _logger
 @inject ToolStateService ToolStateService
 @inject IJSRuntime JSRuntime
-@inject IUserRepository UserRepository
+@inject IUserService UserService
+@inject IToolService ToolService
 
 <!-- Header with wave effect -->
 <div class="wave-container relative overflow-hidden bg-gradient-to-r from-teal-600 to-green-500 shadow-lg w-full">
@@ -116,70 +117,85 @@
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
+{
+    if (firstRender)
     {
-        if (firstRender && DisplayToolGroups != null)
+        // Đảm bảo DisplayToolGroups đã được khởi tạo trước khi tải từ localStorage
+        if (DisplayToolGroups != null && DisplayToolGroups.Any())
         {
-            // Load expanded state from localStorage after first render
             await LoadExpandedStatesFromLocalStorage();
         }
     }
+}
+
 
     private bool isAdmin => AuthenticationStateProvider.GetAuthenticationStateAsync().Result.User.IsInRole("Admin");
 
     private async Task LoadExpandedStatesFromLocalStorage()
+{
+    try
     {
-        try
-        {
-            // Read saved states from localStorage
-            var expandedGroupsJson = await JSRuntime.InvokeAsync<string>("localStorage.getItem", LocalStorageKey);
+        // Đảm bảo DisplayToolGroups đã được khởi tạo
+        if (DisplayToolGroups == null || !DisplayToolGroups.Any())
+            return;
             
-            if (!string.IsNullOrEmpty(expandedGroupsJson))
+        // Đọc trạng thái từ localStorage
+        var expandedGroupsJson = await JSRuntime.InvokeAsync<string>("localStorage.getItem", LocalStorageKey);
+        
+        if (!string.IsNullOrEmpty(expandedGroupsJson))
+        {
+            var expandedGroups = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, bool>>(expandedGroupsJson);
+            
+            if (expandedGroups != null)
             {
-                var expandedGroups = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, bool>>(expandedGroupsJson);
-                
-                if (expandedGroups != null && DisplayToolGroups != null)
+                foreach (var group in DisplayToolGroups)
                 {
-                    foreach (var group in DisplayToolGroups)
+                    if (!string.IsNullOrEmpty(group.Name) && expandedGroups.TryGetValue(group.Name, out bool isExpanded))
                     {
-                        if (!string.IsNullOrEmpty(group.Name) && expandedGroups.TryGetValue(group.Name, out bool isExpanded))
-                        {
-                            group.IsExpanded = isExpanded;
-                        }
+                        group.IsExpanded = isExpanded;
                     }
-                    
-                    // Force UI update
-                    StateHasChanged();
                 }
+                
+                // Cập nhật UI
+                StateHasChanged();
             }
         }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to load expanded states from localStorage");
-        }
     }
+    catch (Exception ex)
+    {
+        _logger.LogError(ex, "Failed to load expanded states from localStorage");
+    }
+}
+
     
     private async Task SaveExpandedStatesToLocalStorage()
+{
+    try
     {
-        try
+        if (DisplayToolGroups != null && DisplayToolGroups.Any())
         {
-            if (DisplayToolGroups != null)
+            // Chỉ lưu những group có tên
+            var expandedGroups = new Dictionary<string, bool>();
+            
+            foreach (var group in DisplayToolGroups)
             {
-                var expandedGroups = DisplayToolGroups
-                    .Where(group => !string.IsNullOrEmpty(group.Name))
-                    .ToDictionary(
-                        group => group.Name!,
-                        group => group.IsExpanded
-                    );
-                
-                var expandedGroupsJson = System.Text.Json.JsonSerializer.Serialize(expandedGroups);
-                await JSRuntime.InvokeVoidAsync("localStorage.setItem", LocalStorageKey, expandedGroupsJson);
+                if (!string.IsNullOrEmpty(group.Name))
+                {
+                    expandedGroups[group.Name] = group.IsExpanded;
+                }
             }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to save expanded states to localStorage");
+            
+            var expandedGroupsJson = System.Text.Json.JsonSerializer.Serialize(expandedGroups);
+            _logger.LogInformation($"Saving expanded states: {expandedGroupsJson}"); // Log để debug
+            await JSRuntime.InvokeVoidAsync("localStorage.setItem", LocalStorageKey, expandedGroupsJson);
         }
     }
+    catch (Exception ex)
+    {
+        _logger.LogError(ex, "Failed to save expanded states to localStorage");
+    }
+}
+
 
     private async Task LoadToolGroups()
     {
@@ -194,7 +210,7 @@
             {
                 // Check user premium status
                 try {
-                    var userData = await UserRepository.GetUserById(currentUserId);
+                    var userData = await UserService.GetUserByIdAsync(currentUserId);
                     userIsPremium = userData?.IsPremium ?? false;
                 }
                 catch (Exception ex) {
@@ -202,8 +218,8 @@
                     userIsPremium = false;
                 }
                 
-                ToolGroups = await ToolRepository.GetAllToolGroups();
-                var FavoriteGroup = await ToolRepository.GetFavoriteToolGroup(currentUserId);
+                ToolGroups = await ToolService.GetAllToolGroups();
+                var FavoriteGroup = await FavouriteToolService.GetFavouriteToolsAsGroupAsync(currentUserId);
                 DisplayToolGroups = ToolGroups;
                 
                 if (FavoriteGroup != null && FavoriteGroup.Tools != null && FavoriteGroup.Tools.Any() && !isAdmin)
@@ -214,15 +230,23 @@
         }
         else
         {
-            DisplayToolGroups = await ToolRepository.GetAllToolGroups();
+            DisplayToolGroups = await ToolService.GetAllToolGroups();
         }
+
+        if (DisplayToolGroups != null && DisplayToolGroups.Any())
+    {
+        await LoadExpandedStatesFromLocalStorage();
+    }
+
     }
 
     private async Task ToggleGroup(ToolGroupDto group)
-    {
-        group.IsExpanded = !group.IsExpanded;
-        await SaveExpandedStatesToLocalStorage();
-    }
+{
+    group.IsExpanded = !group.IsExpanded;
+    await SaveExpandedStatesToLocalStorage();
+    StateHasChanged(); // Đảm bảo UI được cập nhật
+}
+
 
     // Handle tool favorite changes
     private void HandleToolFavoriteChanged(ToolDto updatedTool)
@@ -233,7 +257,7 @@
         try
         {
             // Reload the favorite group to reflect changes
-            var FavoriteGroupTask = ToolRepository.GetFavoriteToolGroup(currentUserId);
+            var FavoriteGroupTask = FavouriteToolService.GetFavouriteToolsAsGroupAsync(currentUserId);
             FavoriteGroupTask.ContinueWith(async task =>
             {
                 if (task.IsCompletedSuccessfully)
