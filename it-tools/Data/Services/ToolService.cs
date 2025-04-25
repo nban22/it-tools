@@ -257,6 +257,7 @@ public class ToolService : IToolService
                     existingTool.IsPremium = toolDto.IsPremium;
                     existingTool.GroupId = toolGroup.Id;
                     existingTool.Icon = toolDto.Icon;
+                    existingTool.Group = toolGroup;
                     
                     await _toolRepository.UpdateToolAsync(existingTool);
                     return MapToolEntityToDto(existingTool);
@@ -279,6 +280,7 @@ public class ToolService : IToolService
                     };
                     
                     var createdTool = await _toolRepository.CreateToolAsync(newTool);
+                    createdTool.Group = toolGroup;
                     return MapToolEntityToDto(createdTool);
                 }
             }
