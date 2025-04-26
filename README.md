@@ -137,7 +137,7 @@ Trong `ToolName.csproj`:
 ```xml
 <ItemGroup>
   <Reference Include="it-tools">
-    <HintPath>../it-tools/bin/Debug/net8.0/it-tools.dll</HintPath>
+    <HintPath>../../it-tools/bin/Debug/net8.0/it-tools.dll</HintPath>
   </Reference>
 </ItemGroup>
 ```
@@ -149,13 +149,54 @@ Trong `ToolName.csproj`:
 Ví dụ: `ToolComponent.razor`
 
 ```razor
-@page "/ToolName"
+@using it_tools.ToolDevelopment.Base
+@using it_tools.ToolDevelopment.Attributes
+@attribute [ToolComponentAttribute(true)]
+@inherits ToolComponentBase
 
-<h3>Teen Tool</h3>
-<p>Đây là công cụ Teen Tool.</p>
+<div class="p-4 bg-white rounded-lg shadow-md">
+    <h2 class="text-xl font-bold mb-4">@Name</h2>
+    <p class="text-gray-600 mb-6">@Description</p>
+    
+    <!-- Your tool UI goes here -->
+    <div class="space-y-4">
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Token Length:</label>
+            <input type="number" @bind="_tokenLength" class="w-full px-3 py-2 border border-gray-300 rounded-md" />
+        </div>
+        
+        <button @onclick="GenerateToken" class="px-4 py-2 bg-blue-600 text-white rounded-md">
+            Generate Token
+        </button>
+        
+        @if (!string.IsNullOrEmpty(_generatedToken))
+        {
+            <div class="mt-4 p-3 bg-gray-50 rounded-md">
+                <p>@_generatedToken</p>
+            </div>
+        }
+    </div>
+</div>
 
 @code {
-    // Logic của công cụ
+    private int _tokenLength = 16;
+    private string _generatedToken = "";
+    
+    // Implement required properties from ToolComponentBase
+    public override string Name => "Demo";
+    public override string Description => "Generate secure random tokens";
+    public override string Group => "Demo Tools";
+    public override string Icon => "🔑";
+    
+    private void GenerateToken()
+    {
+        var random = new Random();
+        var chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+        _generatedToken = new string(
+            Enumerable.Repeat(chars, _tokenLength)
+                      .Select(s => s[random.Next(s.Length)])
+                      .ToArray());
+    }
 }
 ```
 
